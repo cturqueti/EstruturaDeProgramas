@@ -9,15 +9,23 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 #include "driver1.h"
+#include "Arduino.h"
+#include "config.h"
 #include "pinout.h"
-#include <Arduino.h>
 
-void initDriver1() {
-    // Inicialização do driver 1
-    pinMode(BUTTON_PIN, INPUT);
+Driver1::Driver1() {
+    // Construtor
 }
 
-bool readDriver1() {
+Driver1::~Driver1() {
+    // Destrutor
+}
+
+void Driver1::initDriver1() {
+    // Inicialização do driver 1
+}
+
+bool Driver1::readDriver1() {
     // Leitura do driver 1
-    return digitalRead(BUTTON_PIN);
+    return true;
 }

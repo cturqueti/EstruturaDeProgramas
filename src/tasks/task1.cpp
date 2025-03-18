@@ -19,5 +19,5 @@ void initTask1() {
 
 void runTask1() {
     // Lógica da tarefa 1
-    customDelay(DELAY_LONG);
+    //customDelay(DELAY_LONG);
 }

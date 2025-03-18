@@ -9,22 +9,22 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 #include "wifi_manager.h"
-#include "wifi_config.h"
-#include <WiFi.h>
+#include "Arduino.h"
+#include "config.h"
+#include "pinout.h"
 
-void initWiFi() {
-    // Inicialização do Wi-Fi
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("WiFi connected");
+WiFiManager::WiFiManager() {
+    // Construtor
 }
 
-void handleWiFi() {
-    // Lógica para manter a conexão Wi-Fi
-    if (WiFi.status() != WL_CONNECTED) {
-        initWiFi();
-    }
+WiFiManager::~WiFiManager() {
+    // Destrutor
+}
+
+void WiFiManager::initWiFi() {
+    // Inicialização do Wi-Fi
+}
+
+void WiFiManager::handleWiFi() {
+    // Manutenção do Wi-Fi
 }

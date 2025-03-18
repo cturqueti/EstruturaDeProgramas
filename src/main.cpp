@@ -8,40 +8,25 @@
 // 
 // ---------------------------------------------------------------------------------------------------------------- //
 
-#include <Arduino.h>
+#include "Arduino.h"
 #include "config.h"
 #include "pinout.h"
-#include "peripherals.h"
-#include "utils.h"
-#include "mqtt_manager.h"
-#include "modules/module1.h"
-#include "drivers/driver1.h"
-#include "tasks/task1.h"
-#include "wifi/wifi_manager.h"
+#include "module1.h"
+#include "driver1.h"
+#include "wifi_manager.h"
 
-#ifndef UNIT_TEST
+Module1 meuModulo;
+Driver1 meuDriver;
+WiFiManager meuWiFi;
+
 void setup() {
-    // Inicializações
-    initPeripherals();
-    initDriver1();
-    initModule1();
-    initTask1();
-    initWiFi();
-    // initMQTT();
+    meuModulo.initModule1();
+    meuDriver.initDriver1();
+    meuWiFi.initWiFi();
 }
 
 void loop() {
-    // Loop principal
-    runTask1();
-    runModule1();
-    handleWiFi();   // Mantém a conexão Wi-Fi
-    // handleMQTT();   // Mantém a conexão MQTT e processa mensagens
-
-    // // Exemplo: Publica uma mensagem a cada 10 segundos
-    // static unsigned long lastPublish = 0;
-    // if (millis() - lastPublish > 10000) {
-    //     lastPublish = millis();
-    //     publishMessage(MQTT_TOPIC_PUB, "Olá, MQTT!");
-    // }
+    meuModulo.runModule1();
+    meuDriver.readDriver1();
+    meuWiFi.handleWiFi();
 }
-#endif

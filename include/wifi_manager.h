@@ -11,8 +11,16 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
-// Protótipos de funções
-void initWiFi();        // Inicializa a conexão Wi-Fi
-void handleWiFi();      // Mantém a conexão Wi-Fi ativa
+class WiFiManager {
+public:
+    WiFiManager();
+    ~WiFiManager();
+
+    void initWiFi();
+    void handleWiFi();
+
+private:
+    // Variáveis membro
+};
 
 #endif // WIFI_MANAGER_H

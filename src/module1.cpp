@@ -8,23 +8,29 @@
 // 
 // ---------------------------------------------------------------------------------------------------------------- //
 
-#include <Arduino.h>
 #include "module1.h"
+#include "Arduino.h"
 #include "config.h"
 #include "pinout.h"
 #include "utils.h"
 
-bool ledStatusMain = false;
+Module1::Module1() {
+    // Construtor
+}
 
-void initModule1() {
+Module1::~Module1() {
+    // Destrutor
+}
+
+void Module1::initModule1() {
     // Inicialização do módulo 1
     pinMode(LED_PIN, OUTPUT);
     ledStatusMain = false;
 }
 
-void runModule1() {
+void Module1::runModule1() {
     // Lógica do módulo 1
     digitalWrite(LED_PIN, ledStatusMain);
-    customDelay(DELAY_SHORT);
-    ledStatusMain =! ledStatusMain;
+    Utils::customDelay(DELAY_SHORT);
+    ledStatusMain = !ledStatusMain;
 }

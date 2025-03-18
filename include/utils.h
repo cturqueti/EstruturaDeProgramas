@@ -14,12 +14,9 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-// Declaração da função como inline
-inline void customDelay(unsigned long ms) {
-    unsigned long start = millis();
-    while (millis() - start < ms) {
-        // Espera
-    }
-}
+class Utils {
+public:
+    static void customDelay(unsigned long ms);
+};
 
 #endif // UTILS_H

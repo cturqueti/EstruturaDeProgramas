@@ -19,6 +19,7 @@
 #include "tasks/task1.h"
 #include "wifi/wifi_manager.h"
 
+#ifndef UNIT_TEST
 void setup() {
     // Inicializações
     initPeripherals();
@@ -26,7 +27,7 @@ void setup() {
     initModule1();
     initTask1();
     initWiFi();
-    initMQTT();
+    // initMQTT();
 }
 
 void loop() {
@@ -34,12 +35,13 @@ void loop() {
     runTask1();
     runModule1();
     handleWiFi();   // Mantém a conexão Wi-Fi
-    handleMQTT();   // Mantém a conexão MQTT e processa mensagens
+    // handleMQTT();   // Mantém a conexão MQTT e processa mensagens
 
-    // Exemplo: Publica uma mensagem a cada 10 segundos
-    static unsigned long lastPublish = 0;
-    if (millis() - lastPublish > 10000) {
-        lastPublish = millis();
-        publishMessage(MQTT_TOPIC_PUB, "Olá, MQTT!");
-    }
+    // // Exemplo: Publica uma mensagem a cada 10 segundos
+    // static unsigned long lastPublish = 0;
+    // if (millis() - lastPublish > 10000) {
+    //     lastPublish = millis();
+    //     publishMessage(MQTT_TOPIC_PUB, "Olá, MQTT!");
+    // }
 }
+#endif

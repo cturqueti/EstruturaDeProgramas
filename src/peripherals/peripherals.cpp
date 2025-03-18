@@ -2,5 +2,5 @@
 
 void initPeripherals() {
     // Inicialização dos periféricos
-    Serial.begin(115200); // Exemplo: inicializa a comunicação serial
+    Serial.begin(9600); // Exemplo: inicializa a comunicação serial
 }

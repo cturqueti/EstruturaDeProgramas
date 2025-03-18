@@ -21,3 +21,11 @@ Este é um projeto de exemplo para o ESP32 usando PlatformIO.
 
 - `main.cpp`: Contém o loop principal do programa.
 - `modules/module1.cpp`: Exemplo de um módulo que controla um LED.
+
+## Para executar o teste:
+
+- C:\Users\Carlos\.platformio\penv\Scripts\platformio.exe test -vv
+
+## Para compilar e fazer upload do programa principal:
+
+- C:\Users\Carlos\.platformio\penv\Scripts\platformio.exe run --target upload

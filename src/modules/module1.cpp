@@ -14,15 +14,17 @@
 #include "pinout.h"
 #include "utils.h"
 
+bool ledStatusMain = false;
+
 void initModule1() {
     // Inicialização do módulo 1
     pinMode(LED_PIN, OUTPUT);
+    ledStatusMain = false;
 }
 
 void runModule1() {
     // Lógica do módulo 1
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(LED_PIN, ledStatusMain);
     customDelay(DELAY_SHORT);
-    digitalWrite(LED_PIN, LOW);
-    customDelay(DELAY_SHORT);
+    ledStatusMain =! ledStatusMain;
 }

@@ -14,6 +14,12 @@
 #include "pinout.h"
 #include <WiFi.h>
 
+#ifdef ESP32
+#include <ESPmDNS.h>
+#else
+#include <ESP8266mDNS.h>
+#endif
+
 WiFiManager::WiFiManager()
 {
   // Defina o IP estático
@@ -38,9 +44,20 @@ void WiFiManager::initWiFi()
   // Inicialização do Wi-Fi
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(1000);
+    Serial.println("Conectando ao Wi-Fi...");
+  }
+  Serial.println("Conectado ao Wi-Fi!");
+  MDNS.begin(HOSTNAME);
 }
 
 void WiFiManager::handleWiFi()
 {
   // Manutenção do Wi-Fi
+#ifndef ESP32
+  MDNS.update();
+#endif
 }

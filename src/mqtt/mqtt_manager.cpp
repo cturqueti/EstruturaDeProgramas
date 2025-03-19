@@ -39,7 +39,8 @@ void MQTTManager::reconnectMQTT()
         if (_mqttClient.connect("ESP32Client", MQTT_USER, MQTT_PASSWORD))
         {
             Serial.println("Conectado ao broker MQTT!");
-            _mqttClient.subscribe(MQTT_TOPIC_SUB); // Inscreve no tópico
+            publish_discovery();
+            _mqttClient.subscribe(command_topic); // Inscreve no tópico
         }
         else
         {

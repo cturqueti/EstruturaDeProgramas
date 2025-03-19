@@ -1,14 +1,13 @@
 // ---------------------------------------------------------------------------------------------------------------- //
-// 
+//
 // Este arquivo contém configurações globais do projeto, como constantes, macros, e configurações de hardware.
 //
 // O que pode ser adicionado:
 // Constantes de tempo (delays, timeouts).
 // Configurações de debug (por exemplo, ativar/desativar logs).
 // Configurações de hardware (por exemplo, tamanho de buffers).
-// 
+//
 // ---------------------------------------------------------------------------------------------------------------- //
-
 
 #ifndef CONFIG_H
 #define CONFIG_H
@@ -22,5 +21,9 @@
 
 // Tamanho de buffers
 #define BUFFER_SIZE 128
+
+#define OTA_PORT 3232
+
+#define HOSTNAME "esp32test"
 
 #endif // CONFIG_H

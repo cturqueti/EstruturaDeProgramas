@@ -50,8 +50,15 @@ void WiFiManager::initWiFi()
     delay(1000);
     Serial.println("Conectando ao Wi-Fi...");
   }
+
   Serial.println("Conectado ao Wi-Fi!");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+
+  // Inicialização do mDNS
+  Serial.print("Iniciando o mDNS: ");
   MDNS.begin(HOSTNAME);
+  Serial.printf("%s.local\n", HOSTNAME);
 }
 
 void WiFiManager::handleWiFi()

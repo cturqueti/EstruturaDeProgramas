@@ -15,24 +15,28 @@
 #include "driver1.h"
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
+#include "peripherals.h"
 #include <ArduinoOTA.h>
 #include "esp_log.h"
 
+Peripherals meuPeripherals;
 Module1 meuModulo;
 Driver1 meuDriver;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT;
 
+void connectMQTT(void *pvParameters);
+
 void setup()
 {
-    esp_log_level_set("*", ESP_LOG_INFO);
-    ESP_LOGI("TAG", "Olá, mundo!");
+    meuPeripherals.initPeripherals();
     meuModulo.initModule1();
     meuDriver.initDriver1();
     meuWiFi.initWiFi();
     meuMQTT.initMQTT();
     ArduinoOTA.setPort(OTA_PORT);
     ArduinoOTA.setPassword(OTA_PASSWORD);
+    Serial.println("Iniciando OTA...");
     ArduinoOTA.begin();
 }
 

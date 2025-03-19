@@ -23,7 +23,6 @@ public:
 
     void initWiFi();
     void handleWiFi();
-    void updateMDNS();
 
 private:
 };

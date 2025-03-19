@@ -1,6 +1,7 @@
 #include "peripherals.h"
 
-void initPeripherals() {
+void Peripherals::initPeripherals()
+{
     // Inicialização dos periféricos
-    Serial.begin(9600); // Exemplo: inicializa a comunicação serial
+    Serial.begin(SERIAL_BAUD); // Exemplo: inicializa a comunicação serial
 }

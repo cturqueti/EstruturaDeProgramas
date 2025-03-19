@@ -38,11 +38,17 @@ public:
     void publishMessage(const char *topic, const char *payload);
     void publish_discovery();
     void publishSwitchState(bool switch_state);
-    void reconnectMQTT();
+
+    inline bool isConnected() { return _mqttClient.connected(); }
 
 private:
     WiFiClient _espClient;
     PubSubClient _mqttClient;
+
+    bool _mqttTaskActive = false;
+
+    static void connectMQTTStatic(void *pvParameters);
+    void reconnectMQTT();
 };
 
 // Callback para mensagens recebidas

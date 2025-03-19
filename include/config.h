@@ -26,4 +26,6 @@
 
 #define HOSTNAME "esp32test"
 
+#define SERIAL_BAUD 115200
+
 #endif // CONFIG_H

@@ -31,6 +31,6 @@ void Module1::initModule1() {
 void Module1::runModule1() {
     // Lógica do módulo 1
     digitalWrite(LED_PIN, ledStatusMain);
-    Utils::customDelay(DELAY_SHORT);
+    Utils::customDelay(DELAY_LONG);
     ledStatusMain = !ledStatusMain;
 }

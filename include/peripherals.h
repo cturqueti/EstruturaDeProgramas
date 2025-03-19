@@ -13,7 +13,9 @@
 
 #include <HardwareSerial.h>
 
-// Protótipo da função
-void initPeripherals(); // Declaração da função
+class Peripherals {
+public:
+    void initPeripherals(); // Declaração da função
+};
 
 #endif // PERIPHERALS_H

@@ -1,18 +1,27 @@
 #include "mqtt_manager.h"
 
 // Função de callback para processar mensagens recebidas
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
+void mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    bool switch_state = false;
     Serial.print("Mensagem recebida no tópico: ");
     Serial.println(topic);
 
-    // Converte o payload para uma string
-    char message[length + 1];
-    memcpy(message, payload, length);
-    message[length] = '\0';
+    // Verifica se a mensagem é para o tópico de comando
+    if (strcmp(topic, command_topic) == 0)
+    {
+        if (payload[0] == 'O' && payload[1] == 'N')
+        {
+            // switch_state = true;
+            Serial.println("Switch ligado");
+        }
+        else if (payload[0] == 'O' && payload[1] == 'F' && payload[2] == 'F')
+        {
+            // switch_state = false;
+            Serial.println("Switch desligado");
+        }
 
-    Serial.print("Payload: ");
-    Serial.println(message);
-
-    // Aqui você pode adicionar a lógica para processar a mensagem
-    // Por exemplo, acionar um relé, mudar o estado de um LED, etc.
+        // Publica o estado atual no tópico de estado
+        mqttManager->publishSwitchState(switch_state);
+    }
 }

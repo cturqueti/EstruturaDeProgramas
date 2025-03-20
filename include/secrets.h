@@ -14,8 +14,8 @@
 #define WIFI_SSID "SIDEOUT 2"
 #define WIFI_PASSWORD "sideout_2301"
 
-#define MQTT_USER ""
-#define MQTT_PASSWORD ""
+#define MQTT_USER "sideoutuser"
+#define MQTT_PASSWORD "sideoutpassword"
 
 #define OTA_PASSWORD "seu_senha_ota"
 

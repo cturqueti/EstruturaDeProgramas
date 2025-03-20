@@ -6,7 +6,7 @@
 #include "secrets.h"
 
 // Configurações do MQTT
-#define MQTT_SERVER "homeassistant.local"
+#define MQTT_SERVER "192.168.0.183"
 #define MQTT_PORT 1883
 
 // Tópicos MQTT

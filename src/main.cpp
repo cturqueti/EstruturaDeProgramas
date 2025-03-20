@@ -46,14 +46,14 @@ void loop()
     meuModulo.runModule1();
     meuDriver.readDriver1();
     meuWiFi.handleWiFi();
-    meuMQTT.handleMQTT();
+    // meuMQTT.handleMQTT();
     ArduinoOTA.handle();
     // Envia uma mensagem a cada 10 segundos
     static unsigned long lastSend = 0;
     if (millis() - lastSend >= 10000)
     {
         lastSend = millis();
-        meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
+        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
     }
 }
 

@@ -11,6 +11,7 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
+#include <WiFi.h>
 #include "wifi_config.h"
 #include "secrets.h"
 #include <IPAddress.h>
@@ -24,7 +25,12 @@ public:
     void initWiFi();
     void handleWiFi();
 
+    inline bool isConnected() { return WiFi.isConnected(); }
+
+    bool reconnectWIFI();
+
 private:
+    bool _wifiTaskActive = false;
 };
 
 #endif // WIFI_MANAGER_H

@@ -26,7 +26,7 @@ Driver1 meuDriver;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT;
 
-void connectMQTT(void *pvParameters);
+// void connectMQTT(void *pvParameters);
 
 void setup()
 {
@@ -45,10 +45,10 @@ void loop()
 {
 
     // updateOTA();
-    meuModulo.runModule1();
-    meuDriver.readDriver1();
-    meuWiFi.handleWiFi();
-    meuMQTT.handleMQTT();
+    // meuModulo.runModule1();
+    // meuDriver.readDriver1();
+    // meuWiFi.handleWiFi();
+    // meuMQTT.handleMQTT();
     ArduinoOTA.handle();
     // Envia uma mensagem a cada 10 segundos
     static unsigned long lastSend = 0;
@@ -56,7 +56,7 @@ void loop()
     {
         lastSend = millis();
         // meuMQTT.publishMessage(MQTT_TOPIC_PUB, discovery_message.c_str());
-        meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
+        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
         // Serial.println("Mensagem enviada a cada 10 segundos");
     }
 }

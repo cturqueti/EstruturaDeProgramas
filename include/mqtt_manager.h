@@ -7,20 +7,23 @@
 #include "ArduinoJson.h"
 
 // Configurações do MQTT
-#define MQTT_SERVER "192.168.0.183"
+#define MQTT_SERVER "homeassistant.local"
 #define MQTT_PORT 1883
 
 // Tópicos MQTT
-
-#define DEVICE_NAME "meu_switch"
+// The ID of the node must only consist of characters from the character class [a-zA-Z0-9_-] (alphanumerics, underscore and hyphen).
+#define DEVICE_NAME "esp32_s3_led"
 #define DEVICE_FRIENDLY_NAME "MeuSwitchESP32"
 #define DEVICE_CLASS "motion"
-#define DISCOVER_TOPIC "homeassistant/meu_switch/garden/config"
-#define COMMAND_TOPIC "homeassistant/meu_switch/garden/command"
-#define STATE_TOPIC "homeassistant/meu_switch/garden/state"
+#define DISCOVER_TOPIC "homeassistant/switch/esp32_s3_led/config"
+#define COMMAND_TOPIC "homeassistant/switch/esp32_s3_led/command"
+#define STATE_TOPIC "homeassistant/switch/esp32_s3_led/state"
 #define UNIQUE_ID "meuswitch01ad"
 #define IDENTIFIERS "01ad"
 #define MANUFACTURER "Eu"
+#define DEVICE_MANUFACTURER "Sideout"
+#define DEVICE_MODEL "ESP32"
+#define DEVICE_SW_VERSION "1.0"
 
 #define MQTT_TOPIC_SUB "seu/topico/sub"
 #define MQTT_TOPIC_PUB "seu/topico/pub"

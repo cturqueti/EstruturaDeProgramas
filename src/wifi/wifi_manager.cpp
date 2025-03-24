@@ -12,7 +12,6 @@
 #include "Arduino.h"
 #include "config.h"
 #include "pinout.h"
-#include <WiFi.h>
 
 #ifdef ESP32
 #include <ESPmDNS.h>
@@ -42,23 +41,23 @@ WiFiManager::~WiFiManager()
 void WiFiManager::initWiFi()
 {
   // Inicialização do Wi-Fi
+  handleWiFi();
+}
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-  while (WiFi.status() != WL_CONNECTED)
+void connectWiFiStatic(void *parameter)
+{
+  WiFiManager *instance = static_cast<WiFiManager *>(parameter);
+  instance->reconnectWIFI();
+  while (true)
   {
-    delay(1000);
-    Serial.println("Conectando ao Wi-Fi...");
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    if (!instance->isConnected())
+    {
+      instance->reconnectWIFI();
+      Serial.println("Reconectado ao Wi-Fi!");
+    }
   }
-
-  Serial.println("Conectado ao Wi-Fi!");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
-
-  // Inicialização do mDNS
-  Serial.print("Iniciando o mDNS: ");
-  MDNS.begin(HOSTNAME);
-  Serial.printf("%s.local\n", HOSTNAME);
+  vTaskDelete(nullptr);
 }
 
 void WiFiManager::handleWiFi()
@@ -67,4 +66,66 @@ void WiFiManager::handleWiFi()
 #ifndef ESP32
   MDNS.update();
 #endif
+
+  if (!WiFi.isConnected())
+  {
+    Serial.println("Conectando ao Wi-Fi...");
+    if (!_wifiTaskActive)
+    {
+      BaseType_t result = xTaskCreate(connectWiFiStatic, "WiFi Connect", 8192, this, 2, NULL);
+      Serial.println("Tarefa de WiFi criada...");
+      _wifiTaskActive = true;
+    }
+  }
+}
+
+bool WiFiManager::reconnectWIFI()
+{
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  int retries = 0;
+
+  while (WiFi.status() != WL_CONNECTED && retries < 10)
+  {
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.println("Conectando ao Wi-Fi...");
+    delay(1000);
+    switch (WiFi.status())
+    {
+    case WL_NO_SSID_AVAIL:
+      Serial.println("SSID não disponível");
+      break;
+    case WL_CONNECT_FAILED:
+      Serial.println("Falha ao conectar");
+      break;
+    case WL_CONNECTION_LOST:
+      Serial.println("Conexão perdida");
+      break;
+    case WL_DISCONNECTED:
+      Serial.println("Desconectado");
+      break;
+    default:
+      Serial.println("Erro desconhecido");
+      break;
+    }
+  }
+  _wifiTaskActive = false;
+
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println("Conectado ao Wi-Fi!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+
+    // Inicialização do mDNS
+    Serial.print("Iniciando o mDNS: ");
+    MDNS.begin(HOSTNAME);
+    Serial.printf("%s.local\n", HOSTNAME);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }

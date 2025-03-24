@@ -17,6 +17,12 @@ MQTTManager::~MQTTManager()
 
 void MQTTManager::initMQTT()
 {
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(2000);
+        Serial.println("MQTT aguardando Wi-Fi...");
+    }
+    Serial.println("MQTT liberado");
     _mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     _mqttClient.setCallback(mqttCallback);
     handleMQTT();
@@ -62,7 +68,6 @@ void MQTTManager::publishMessage(const char *topic, const char *payload)
     if (_mqttClient.connected())
     {
         bool result = _mqttClient.publish(topic, payload);
-        Serial.printf("Conectado ao broker MQTT: %s:%d\n", MQTT_SERVER, MQTT_PORT);
         if (result)
         {
             Serial.printf("Mensagem publicada com sucesso no tópico %s: %s\n", topic, payload);
@@ -81,25 +86,43 @@ void MQTTManager::publishMessage(const char *topic, const char *payload)
 // Função para publicar a mensagem de descoberta
 void MQTTManager::publish_discovery()
 {
+    // <discovery_prefix>/<component>/[<node_id>/]<object_id>/config
     // Cria um objeto JSON
     JsonDocument jsonDoc;
+    String topic_address;
+
+    JsonVariant device = jsonDoc["dev"].to<JsonObject>();
+    JsonVariant origin = jsonDoc["0"].to<JsonObject>();
+    JsonVariant components = jsonDoc["cmps"].to<JsonObject>();
+
+    device["ids"] = IDENTIFIERS;
+    device["name"] = DEVICE_FRIENDLY_NAME;
+    device["sw"] = "1.0";
+    device["mdl"] = DEVICE_MODEL;
+    device["mf"] = DEVICE_MANUFACTURER;
+    device["swv"] = DEVICE_SW_VERSION;
+
+    origin["Name"] = DEVICE_NAME;
+    origin["Sw"] = "1.0";
 
     // Adiciona os campos ao JSON
-    jsonDoc["name"] = nullptr;
-    jsonDoc["command_topic"] = DEVICE_CLASS;
-    jsonDoc["state_topic"] = STATE_TOPIC;
-    jsonDoc["unique_id"] = UNIQUE_ID;
 
-    JsonVariant device = jsonDoc.createNestedObject("device");
-    device["identifiers"][0] = IDENTIFIERS;
-    device["name"] = DEVICE_FRIENDLY_NAME;
+    jsonDoc["command_topic"] = COMMAND_TOPIC;
+    jsonDoc["state_topic"] = STATE_TOPIC;
+
+    // JsonVariant device = jsonDoc["device"].to<JsonObject>();
+    // device["identifiers"][0] = IDENTIFIERS;
+    // device["name"] = DEVICE_FRIENDLY_NAME;
 
     // Converte o JSON para uma string
     String discovery_message;
     serializeJson(jsonDoc, discovery_message);
+    Serial.println("Tamanho da mensagem: " + String(strlen(discovery_message.c_str())));
 
+    _discoverTopic = "homeassistant/switch/" + String(DEVICE_NAME) + "/" + String(IDENTIFIERS) + "/config";
     // Publica a mensagem de descoberta
-    bool result = _mqttClient.publish(DISCOVER_TOPIC, discovery_message.c_str(), true);
+    bool result = _mqttClient.publish(_discoverTopic.c_str(), discovery_message.c_str(), true);
+    // bool result = _mqttClient.publish(DISCOVER_TOPIC, "teste", true);
     if (result)
     {
         Serial.printf("Mensagem publicada com sucesso no tópico %s: %s\n", _discoverTopic.c_str(), discovery_message.c_str());
@@ -117,7 +140,7 @@ void MQTTManager::publishSwitchState(bool switch_state)
 
 void MQTTManager::reconnectMQTT()
 {
-    while (!_mqttClient.connected())
+    while (!_mqttClient.connected() && WiFi.status() == WL_CONNECTED)
     {
         Serial.println("Conectando ao broker MQTT...");
         if (_mqttClient.connect("ESP32Client", MQTT_USER, MQTT_PASSWORD))

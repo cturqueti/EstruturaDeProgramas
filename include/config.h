@@ -28,4 +28,6 @@
 
 #define SERIAL_BAUD 115200
 
+#define MQTT_ENABLED true
+
 #endif // CONFIG_H

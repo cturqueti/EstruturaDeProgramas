@@ -40,7 +40,7 @@ void setup()
         "LED GPIO 2",
         "led_gpio2",
         ComponentType::SWITCH,
-        255,
+        2,
         "homeassistant/switch/led_gpio2/command",
         "homeassistant/switch/led_gpio2/state",
         [](bool state)
@@ -59,21 +59,21 @@ void setup()
         "homeassistant/sensor/temp_sensor1/state"};
     meuMQTT.addComponent(tempSensor);
 
-    ComponentConfig fanConfig;
-    fanConfig.type = ComponentType::FAN;
-    fanConfig.gpio = 2;              // GPIO 3
-    fanConfig.pwm_channel = 0;       // Canal PWM 0
-    fanConfig.pwm_frequency = 25000; // 25kHz (frequência comum para fans)
-    fanConfig.pwm_resolution = 8;    // 8 bits (0-255)
-    fanConfig.name = "Ventilador Quarto";
-    fanConfig.unique_id = "quarto_fan_01";
-    fanConfig.command_topic = "home/bedroom/fan/power";
-    fanConfig.state_topic = "home/bedroom/fan/state";
-    fanConfig.speed_command_topic = "home/bedroom/fan/speed/set";
-    fanConfig.speed_state_topic = "home/bedroom/fan/speed/state";
-    fanConfig.speeds = "off,low,medium,high"; // Opcional, para controle discreto
+    // ComponentConfig fanConfig;
+    // fanConfig.type = ComponentType::FAN;
+    // fanConfig.gpio = 2;              // GPIO 3
+    // fanConfig.pwm_channel = 0;       // Canal PWM 0
+    // fanConfig.pwm_frequency = 25000; // 25kHz (frequência comum para fans)
+    // fanConfig.pwm_resolution = 8;    // 8 bits (0-255)
+    // fanConfig.name = "Ventilador Quarto";
+    // fanConfig.unique_id = "quarto_fan_01";
+    // fanConfig.command_topic = "home/bedroom/fan/power";
+    // fanConfig.state_topic = "home/bedroom/fan/state";
+    // fanConfig.speed_command_topic = "home/bedroom/fan/speed/set";
+    // fanConfig.speed_state_topic = "home/bedroom/fan/speed/state";
+    // fanConfig.speeds = "off,low,medium,high"; // Opcional, para controle discreto
 
-    mqttManager->addComponent(fanConfig);
+    // mqttManager->addComponent(fanConfig);
 
     meuMQTT.initMQTT("ESP32_01", "Meu ESP32 Dinâmico");
     ArduinoOTA.setPort(OTA_PORT);

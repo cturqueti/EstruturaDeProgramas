@@ -1,7 +1,5 @@
 #include "mqtt_manager.h"
 #include "pinout.h"
-#include <driver/ledc.h>
-#include <Arduino.h>
 
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;
@@ -37,22 +35,11 @@ void MQTTManager::addComponent(const ComponentConfig &config)
 {
     _components.push_back(config);
 
-    // Configura GPIO conforme o tipo
-    switch (config.type)
+    // Configura GPIO se for saída
+    if (config.type == ComponentType::SWITCH)
     {
-    case ComponentType::SWITCH:
         pinMode(config.gpio, OUTPUT);
         digitalWrite(config.gpio, LOW);
-        break;
-    case ComponentType::FAN:
-        if (config.pwm_channel >= 0)
-        { // Verifica se é um canal PWM válido
-            pinMode(config.gpio, OUTPUT);
-            analogWrite(config.gpio, 0);
-        }
-        break;
-    default:
-        break;
     }
 }
 
@@ -163,12 +150,17 @@ void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
     Serial.println("------------- MQTT CALLBACK ---------------");
 
     // Garante terminação nula para o payload
-    char payloadStr[length + 1];
-    memcpy(payloadStr, payload, length);
-    payloadStr[length] = '\0';
+    if (length > 0)
+    {
+        payload[length] = '\0';
+    }
+    else
+    {
+        payload = (byte *)""; // Payload vazio
+    }
 
     String strTopic = String(topic);
-    String strPayload = String(payloadStr);
+    String strPayload = String((char *)payload);
 
     Serial.printf("[MQTT] Mensagem recebida - Tópico: %s, Payload: %s\n",
                   strTopic.c_str(), strPayload.c_str());
@@ -177,24 +169,10 @@ void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         if (component.command_topic.equals(strTopic))
         {
-            if (component.type == ComponentType::SWITCH)
-            {
-                handleSwitchMessage(component, strPayload);
-            }
-            else if (component.type == ComponentType::FAN)
-            {
-                handleFanMessage(component, strPayload);
-            }
+            Serial.printf("Processando comando para %s\n", component.name.c_str());
+            handleSwitchMessage(component, strPayload);
             Serial.println("-------------------------------------------");
-            return;
-        }
-        else if (component.type == ComponentType::FAN &&
-                 !component.speed_command_topic.isEmpty() &&
-                 component.speed_command_topic.equals(strTopic))
-        {
-            handleFanSpeedMessage(component, strPayload);
-            Serial.println("-------------------------------------------");
-            return;
+            return; // Encerra após encontrar o componente correspondente
         }
     }
 
@@ -215,15 +193,10 @@ void MQTTManager::subscribeAllCommandTopics()
 {
     for (const auto &component : _components)
     {
-        if ((component.type == ComponentType::SWITCH || component.type == ComponentType::FAN) && !component.command_topic.isEmpty())
+        if (component.type == ComponentType::SWITCH && !component.command_topic.isEmpty())
         {
             _mqttClient.subscribe(component.command_topic.c_str());
             Serial.printf("Inscrito no tópico: %s\n", component.command_topic.c_str());
-        }
-        if (component.type == ComponentType::FAN && !component.speed_command_topic.isEmpty())
-        {
-            _mqttClient.subscribe(component.speed_command_topic.c_str());
-            Serial.printf("Inscrito no tópico de velocidade: %s\n", component.speed_command_topic.c_str());
         }
     }
 }
@@ -247,16 +220,6 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     case ComponentType::SWITCH:
         doc["command_topic"] = config.command_topic;
         doc["state_topic"] = config.state_topic;
-        doc["payload_on"] = "ON";
-        doc["payload_off"] = "OFF";
-        break;
-
-    case ComponentType::FAN:
-        doc["command_topic"] = config.command_topic;
-        doc["state_topic"] = config.state_topic;
-        doc["speed_command_topic"] = config.speed_command_topic;
-        doc["speed_state_topic"] = config.speed_state_topic;
-        doc["speeds"] = config.speeds; // Ex: ["off", "low", "medium", "high"]
         doc["payload_on"] = "ON";
         doc["payload_off"] = "OFF";
         break;
@@ -289,52 +252,6 @@ void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const Strin
 
     // Publica estado atual
     _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
-}
-
-void MQTTManager::handleFanMessage(const ComponentConfig &config, const String &payload)
-{
-    bool state = (payload == "ON" || payload == "1");
-
-    if (state)
-    {
-        // Se ligar, mantém a última velocidade conhecida ou padrão
-        int speed = config.last_speed > 0 ? config.last_speed : 50; // 50% como padrão
-        ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
-    }
-    else
-    {
-        ledcWrite(config.pwm_channel, 0); // Desliga o fan
-    }
-
-    // Publica estado
-    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
-
-    // Executa callback se definido
-    if (config.callback)
-    {
-        config.callback(state);
-    }
-}
-
-void MQTTManager::handleFanSpeedMessage(const ComponentConfig &config, const String &payload)
-{
-    // Converte a string de velocidade para um valor numérico
-    int speed = payload.toInt();
-    speed = constrain(speed, 0, 100); // Garante que está entre 0-100%
-    int pwmValue = map(speed, 0, 100, 0, 255);
-    analogWrite(config.gpio, pwmValue);
-
-    // Aplica ao PWM
-    ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
-
-    // Publica o estado da velocidade
-    _mqttClient.publish(config.speed_state_topic.c_str(), String(speed).c_str(), true);
-
-    // Se tinha um callback de velocidade, executa
-    if (config.speed_callback)
-    {
-        config.speed_callback(speed);
-    }
 }
 
 void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUpdate)

@@ -18,6 +18,7 @@
 #include "peripherals.h"
 #include <ArduinoOTA.h>
 #include "esp_log.h"
+#include <ArduinoJson.h>
 
 Peripherals meuPeripherals;
 Module1 meuModulo;
@@ -42,18 +43,21 @@ void setup()
 
 void loop()
 {
+
     // updateOTA();
     meuModulo.runModule1();
     meuDriver.readDriver1();
     meuWiFi.handleWiFi();
-    // meuMQTT.handleMQTT();
+    meuMQTT.handleMQTT();
     ArduinoOTA.handle();
     // Envia uma mensagem a cada 10 segundos
     static unsigned long lastSend = 0;
     if (millis() - lastSend >= 10000)
     {
         lastSend = millis();
-        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
+        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, discovery_message.c_str());
+        meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
+        // Serial.println("Mensagem enviada a cada 10 segundos");
     }
 }
 

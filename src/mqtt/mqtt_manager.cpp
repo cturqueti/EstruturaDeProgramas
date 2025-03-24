@@ -1,21 +1,21 @@
 #include "mqtt_manager.h"
+#include "pinout.h"
+#include <driver/ledc.h>
+#include <Arduino.h>
 
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;
 
 MQTTManager::MQTTManager() : _mqttClient(_espClient)
 {
-    // Gera os tópicos dinamicamente
-    _discoverTopic = "homeassistant/switch/" + String(DEVICE_NAME) + "/config";
-    _commandTopic = String(DEVICE_NAME) + "/command";
-    _stateTopic = String(DEVICE_NAME) + "/state";
+    _mqttClient.setBufferSize(MQTT_MAX_PACKET_SIZE);
 }
 
 MQTTManager::~MQTTManager()
 {
 }
 
-void MQTTManager::initMQTT()
+void MQTTManager::initMQTT(const String &device_id, const String &device_name)
 {
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -24,8 +24,52 @@ void MQTTManager::initMQTT()
     }
     Serial.println("MQTT liberado");
     _mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-    _mqttClient.setCallback(mqttCallback);
+    _device_id = device_id;
+    _device_name = device_name;
+
+    _mqttClient.setCallback([this](char *topic, byte *payload, unsigned int length)
+                            { this->mqttCallback(topic, payload, length); });
+
     handleMQTT();
+}
+
+void MQTTManager::addComponent(const ComponentConfig &config)
+{
+    _components.push_back(config);
+
+    // Configura GPIO conforme o tipo
+    switch (config.type)
+    {
+    case ComponentType::SWITCH:
+        pinMode(config.gpio, OUTPUT);
+        digitalWrite(config.gpio, LOW);
+        break;
+    case ComponentType::FAN:
+        if (config.pwm_channel >= 0)
+        { // Verifica se é um canal PWM válido
+            pinMode(config.gpio, OUTPUT);
+            analogWrite(config.gpio, 0);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void MQTTManager::loop()
+{
+    _mqttClient.loop();
+}
+
+void MQTTManager::publishSensorData(const String &unique_id, float value)
+{
+    for (const auto &component : _components)
+    {
+        if (component.unique_id == unique_id && component.type == ComponentType::SENSOR)
+        {
+            _mqttClient.publish(component.state_topic.c_str(), String(value).c_str(), true);
+        }
+    }
 }
 
 void connectMQTTStatic(void *pvParameters)
@@ -36,11 +80,15 @@ void connectMQTTStatic(void *pvParameters)
     instance->reconnectMQTT();
     while (true)
     {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
         if (!instance->isConnected())
         {
             instance->reconnectMQTT();
             Serial.println("Reconectado ao broker MQTT!");
+        }
+        else
+        {
+            instance->loop();
         }
     }
     vTaskDelete(nullptr);
@@ -83,61 +131,6 @@ void MQTTManager::publishMessage(const char *topic, const char *payload)
     }
 }
 
-// Função para publicar a mensagem de descoberta
-void MQTTManager::publish_discovery()
-{
-    // <discovery_prefix>/<component>/[<node_id>/]<object_id>/config
-    // Cria um objeto JSON
-    JsonDocument jsonDoc;
-    String topic_address;
-
-    JsonVariant device = jsonDoc["dev"].to<JsonObject>();
-    JsonVariant origin = jsonDoc["0"].to<JsonObject>();
-    JsonVariant components = jsonDoc["cmps"].to<JsonObject>();
-
-    device["ids"] = IDENTIFIERS;
-    device["name"] = DEVICE_FRIENDLY_NAME;
-    device["sw"] = "1.0";
-    device["mdl"] = DEVICE_MODEL;
-    device["mf"] = DEVICE_MANUFACTURER;
-    device["swv"] = DEVICE_SW_VERSION;
-
-    origin["Name"] = DEVICE_NAME;
-    origin["Sw"] = "1.0";
-
-    // Adiciona os campos ao JSON
-
-    jsonDoc["command_topic"] = COMMAND_TOPIC;
-    jsonDoc["state_topic"] = STATE_TOPIC;
-
-    // JsonVariant device = jsonDoc["device"].to<JsonObject>();
-    // device["identifiers"][0] = IDENTIFIERS;
-    // device["name"] = DEVICE_FRIENDLY_NAME;
-
-    // Converte o JSON para uma string
-    String discovery_message;
-    serializeJson(jsonDoc, discovery_message);
-    Serial.println("Tamanho da mensagem: " + String(strlen(discovery_message.c_str())));
-
-    _discoverTopic = "homeassistant/switch/" + String(DEVICE_NAME) + "/" + String(IDENTIFIERS) + "/config";
-    // Publica a mensagem de descoberta
-    bool result = _mqttClient.publish(_discoverTopic.c_str(), discovery_message.c_str(), true);
-    // bool result = _mqttClient.publish(DISCOVER_TOPIC, "teste", true);
-    if (result)
-    {
-        Serial.printf("Mensagem publicada com sucesso no tópico %s: %s\n", _discoverTopic.c_str(), discovery_message.c_str());
-    }
-    else
-    {
-        Serial.printf("Falha ao publicar mensagem no tópico %s\n", _discoverTopic.c_str());
-    }
-}
-
-void MQTTManager::publishSwitchState(bool switch_state)
-{
-    _mqttClient.publish(_stateTopic.c_str(), switch_state ? "ON" : "OFF", true);
-}
-
 void MQTTManager::reconnectMQTT()
 {
     while (!_mqttClient.connected() && WiFi.status() == WL_CONNECTED)
@@ -146,9 +139,13 @@ void MQTTManager::reconnectMQTT()
         if (_mqttClient.connect("ESP32Client", MQTT_USER, MQTT_PASSWORD))
         {
             Serial.println("Conectado ao broker MQTT!");
-            publish_discovery();
-            Serial.println("Inscrevendo em um topico...");
-            _mqttClient.subscribe(_commandTopic.c_str()); // Inscreve no tópico
+
+            // Publica todas as mensagens de discovery
+            publishAllDiscoveries();
+
+            // Inscreve em todos os tópicos de comando
+            subscribeAllCommandTopics();
+
             _mqttTaskActive = false;
         }
         else
@@ -159,4 +156,246 @@ void MQTTManager::reconnectMQTT()
             vTaskDelay(5000 / portTICK_PERIOD_MS);
         }
     }
+}
+
+void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    Serial.println("------------- MQTT CALLBACK ---------------");
+
+    // Garante terminação nula para o payload
+    char payloadStr[length + 1];
+    memcpy(payloadStr, payload, length);
+    payloadStr[length] = '\0';
+
+    String strTopic = String(topic);
+    String strPayload = String(payloadStr);
+
+    Serial.printf("[MQTT] Mensagem recebida - Tópico: %s, Payload: %s\n",
+                  strTopic.c_str(), strPayload.c_str());
+
+    for (const auto &component : _components)
+    {
+        if (component.command_topic.equals(strTopic))
+        {
+            if (component.type == ComponentType::SWITCH)
+            {
+                handleSwitchMessage(component, strPayload);
+            }
+            else if (component.type == ComponentType::FAN)
+            {
+                handleFanMessage(component, strPayload);
+            }
+            Serial.println("-------------------------------------------");
+            return;
+        }
+        else if (component.type == ComponentType::FAN &&
+                 !component.speed_command_topic.isEmpty() &&
+                 component.speed_command_topic.equals(strTopic))
+        {
+            handleFanSpeedMessage(component, strPayload);
+            Serial.println("-------------------------------------------");
+            return;
+        }
+    }
+
+    Serial.println("Nenhum componente correspondente encontrado para o tópico");
+    Serial.println("-------------------------------------------");
+}
+
+void MQTTManager::publishAllDiscoveries()
+{
+    for (const auto &component : _components)
+    {
+        publishDiscovery(component);
+        delay(100);
+    }
+}
+
+void MQTTManager::subscribeAllCommandTopics()
+{
+    for (const auto &component : _components)
+    {
+        if ((component.type == ComponentType::SWITCH || component.type == ComponentType::FAN) && !component.command_topic.isEmpty())
+        {
+            _mqttClient.subscribe(component.command_topic.c_str());
+            Serial.printf("Inscrito no tópico: %s\n", component.command_topic.c_str());
+        }
+        if (component.type == ComponentType::FAN && !component.speed_command_topic.isEmpty())
+        {
+            _mqttClient.subscribe(component.speed_command_topic.c_str());
+            Serial.printf("Inscrito no tópico de velocidade: %s\n", component.speed_command_topic.c_str());
+        }
+    }
+}
+
+// -------------------- Private Methods --------------------
+
+void MQTTManager::publishDiscovery(const ComponentConfig &config)
+{
+    JsonDocument doc;
+    JsonArray identifiers = doc["device"].to<JsonArray>();
+    identifiers.add(_device_id);
+
+    doc["device"]["name"] = _device_name;
+    doc["device"]["model"] = "ESP32";
+    doc["device"]["manufacturer"] = "Sideout";
+    doc["name"] = config.name;
+    doc["unique_id"] = config.unique_id;
+
+    switch (config.type)
+    {
+    case ComponentType::SWITCH:
+        doc["command_topic"] = config.command_topic;
+        doc["state_topic"] = config.state_topic;
+        doc["payload_on"] = "ON";
+        doc["payload_off"] = "OFF";
+        break;
+
+    case ComponentType::FAN:
+        doc["command_topic"] = config.command_topic;
+        doc["state_topic"] = config.state_topic;
+        doc["speed_command_topic"] = config.speed_command_topic;
+        doc["speed_state_topic"] = config.speed_state_topic;
+        doc["speeds"] = config.speeds; // Ex: ["off", "low", "medium", "high"]
+        doc["payload_on"] = "ON";
+        doc["payload_off"] = "OFF";
+        break;
+
+    case ComponentType::SENSOR:
+        doc["state_topic"] = config.state_topic;
+        doc["unit_of_measurement"] = "°C"; // Ajuste conforme necessário
+        break;
+    }
+
+    String topic = "homeassistant/" +
+                   String(config.type == ComponentType::SWITCH ? "switch" : "sensor") +
+                   "/" + config.unique_id + "/config";
+
+    String payload;
+    serializeJson(doc, payload);
+    _mqttClient.publish(topic.c_str(), payload.c_str(), true);
+}
+
+void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const String &payload)
+{
+    bool state = (payload == "ON" || payload == "1");
+    digitalWrite(config.gpio, state);
+
+    // Executa callback se definido
+    if (config.callback)
+    {
+        config.callback(state);
+    }
+
+    // Publica estado atual
+    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+}
+
+void MQTTManager::handleFanMessage(const ComponentConfig &config, const String &payload)
+{
+    bool state = (payload == "ON" || payload == "1");
+
+    if (state)
+    {
+        // Se ligar, mantém a última velocidade conhecida ou padrão
+        int speed = config.last_speed > 0 ? config.last_speed : 50; // 50% como padrão
+        ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
+    }
+    else
+    {
+        ledcWrite(config.pwm_channel, 0); // Desliga o fan
+    }
+
+    // Publica estado
+    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+
+    // Executa callback se definido
+    if (config.callback)
+    {
+        config.callback(state);
+    }
+}
+
+void MQTTManager::handleFanSpeedMessage(const ComponentConfig &config, const String &payload)
+{
+    // Converte a string de velocidade para um valor numérico
+    int speed = payload.toInt();
+    speed = constrain(speed, 0, 100); // Garante que está entre 0-100%
+    int pwmValue = map(speed, 0, 100, 0, 255);
+    analogWrite(config.gpio, pwmValue);
+
+    // Aplica ao PWM
+    ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
+
+    // Publica o estado da velocidade
+    _mqttClient.publish(config.speed_state_topic.c_str(), String(speed).c_str(), true);
+
+    // Se tinha um callback de velocidade, executa
+    if (config.speed_callback)
+    {
+        config.speed_callback(speed);
+    }
+}
+
+void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUpdate)
+{
+    static unsigned long lastUpdate = 0;
+    const unsigned long updateInterval = 30000; // 30 segundos
+
+    // Verifica se é hora de atualizar
+    if (!forceUpdate && millis() - lastUpdate < updateInterval)
+    {
+        return;
+    }
+
+    Serial.println("[SENSORES] Iniciando atualização de sensores...");
+
+    for (const auto &component : _components)
+    {
+        if (component.type == ComponentType::SENSOR && component.sensor_callback)
+        {
+            try
+            {
+                // Executa o callback para obter o valor atual
+                float currentValue = component.sensor_callback();
+
+                // Formata o valor conforme o tipo de sensor
+                String payload;
+                if (component.unit_of_measurement == "°C" ||
+                    component.unit_of_measurement == "°F")
+                {
+                    payload = String(currentValue, 1); // 1 casa decimal para temperaturas
+                }
+                else
+                {
+                    payload = String(currentValue);
+                }
+
+                // Publica no tópico de estado
+                if (_mqttClient.connected())
+                {
+                    bool published = _mqttClient.publish(
+                        component.state_topic.c_str(),
+                        payload.c_str(),
+                        true // retained
+                    );
+
+                    Serial.printf("[SENSOR] %s: %s %s (%s)\n",
+                                  component.name.c_str(),
+                                  payload.c_str(),
+                                  component.unit_of_measurement.c_str(),
+                                  published ? "Publicado" : "Falha na publicação");
+                }
+            }
+            catch (const std::exception &e)
+            {
+                Serial.printf("[ERRO] Falha ao ler sensor %s: %s\n",
+                              component.name.c_str(),
+                              e.what());
+            }
+        }
+    }
+
+    lastUpdate = millis();
+    Serial.println("[SENSORES] Atualização concluída");
 }

@@ -5,36 +5,18 @@
 #include <WiFi.h>         // Biblioteca Wi-Fi para ESP32
 #include "secrets.h"
 #include "ArduinoJson.h"
+#include <vector>
+#include <functional>
+#include "config_types.h"
+
+// #define MQTT_MAX_PACKET_SIZE 2048
 
 // Configurações do MQTT
 #define MQTT_SERVER "homeassistant.local"
 #define MQTT_PORT 1883
 
-// Tópicos MQTT
-// The ID of the node must only consist of characters from the character class [a-zA-Z0-9_-] (alphanumerics, underscore and hyphen).
-#define DEVICE_NAME "esp32_s3_led"
-#define DEVICE_FRIENDLY_NAME "MeuSwitchESP32"
-#define DEVICE_CLASS "motion"
-#define DISCOVER_TOPIC "homeassistant/switch/esp32_s3_led/config"
-#define COMMAND_TOPIC "homeassistant/switch/esp32_s3_led/command"
-#define STATE_TOPIC "homeassistant/switch/esp32_s3_led/state"
-#define UNIQUE_ID "meuswitch01ad"
-#define IDENTIFIERS "01ad"
-#define MANUFACTURER "Eu"
-#define DEVICE_MANUFACTURER "Sideout"
-#define DEVICE_MODEL "ESP32"
-#define DEVICE_SW_VERSION "1.0"
-
-#define MQTT_TOPIC_SUB "seu/topico/sub"
-#define MQTT_TOPIC_PUB "seu/topico/pub"
-
 // Forward declaration of MQTTManager
 class MQTTManager;
-
-// Variáveis globais
-extern const char *discovery_topic;
-extern const char *command_topic;
-extern const char *state_topic;
 
 extern MQTTManager *mqttManager;
 
@@ -43,28 +25,42 @@ class MQTTManager
 public:
     MQTTManager();
     ~MQTTManager();
-    void initMQTT();
+    void initMQTT(const String &device_id, const String &device_name);
+    void addComponent(const ComponentConfig &config);
+    void loop();
+
+    void publishSensorData(const String &unique_id, float value);
     void handleMQTT();
     void publishMessage(const char *topic, const char *payload);
-    void publish_discovery();
-    void publishSwitchState(bool switch_state);
+    // void publishSwitchState(bool switch_state);
 
     inline bool isConnected() { return _mqttClient.connected(); }
     void reconnectMQTT();
 
+    void mqttCallback(char *topic, byte *payload, unsigned int length);
+
+    void publishAllDiscoveries();
+    void subscribeAllCommandTopics();
+
 private:
     WiFiClient _espClient;
     PubSubClient _mqttClient;
-
+    std::vector<ComponentConfig> _components;
+    String _device_id;
+    String _device_name;
     bool _mqttTaskActive = false;
+
     String _discoverTopic;
     String _commandTopic;
     String _stateTopic;
 
+    void publishDiscovery(const ComponentConfig &config);
+    void handleSwitchMessage(const ComponentConfig &config, const String &payload);
+    void handleSensorUpdate(const ComponentConfig &config, bool forceUpdate = false);
+    void handleFanMessage(const ComponentConfig &config, const String &payload);
+    void handleFanSpeedMessage(const ComponentConfig &config, const String &payload);
+
     // static void connectMQTTStatic(void *pvParameters);
 };
-
-// Callback para mensagens recebidas
-void mqttCallback(char *topic, byte *payload, unsigned int length);
 
 #endif // MQTT_MANAGER_H

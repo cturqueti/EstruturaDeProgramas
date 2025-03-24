@@ -52,7 +52,7 @@ void Button::runbutton()
 
     if (button_state == PRESSED_BUTTON)
     {
-        mqttManager->publishSwitchState(true);
+        // mqttManager->publishSwitchState(true);
         if (!_hold_flag)
         {
             _hold_count = millis();
@@ -66,7 +66,7 @@ void Button::runbutton()
     }
     else
     {
-        mqttManager->publishSwitchState(false);
+        // mqttManager->publishSwitchState(false);
         _hold_flag = false;
     }
 }

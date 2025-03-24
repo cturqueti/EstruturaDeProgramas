@@ -34,7 +34,48 @@ void setup()
     meuModulo.initModule1();
     meuDriver.initDriver1();
     meuWiFi.initWiFi();
-    meuMQTT.initMQTT();
+
+    // 2. Adiciona componentes dinamicamente
+    ComponentConfig led1 = {
+        "LED GPIO 2",
+        "led_gpio2",
+        ComponentType::SWITCH,
+        255,
+        "homeassistant/switch/led_gpio2/command",
+        "homeassistant/switch/led_gpio2/state",
+        [](bool state)
+        {
+            digitalWrite(2, state);
+            Serial.printf("LED 2 alterado para %s\n", state ? "ON" : "OFF");
+        }};
+    meuMQTT.addComponent(led1);
+
+    ComponentConfig tempSensor = {
+        "Sensor Temperatura",
+        "temp_sensor1",
+        ComponentType::SENSOR,
+        255, // Não usa GPIO
+        "",  // Sem command topic
+        "homeassistant/sensor/temp_sensor1/state"};
+    meuMQTT.addComponent(tempSensor);
+
+    ComponentConfig fanConfig;
+    fanConfig.type = ComponentType::FAN;
+    fanConfig.gpio = 2;              // GPIO 3
+    fanConfig.pwm_channel = 0;       // Canal PWM 0
+    fanConfig.pwm_frequency = 25000; // 25kHz (frequência comum para fans)
+    fanConfig.pwm_resolution = 8;    // 8 bits (0-255)
+    fanConfig.name = "Ventilador Quarto";
+    fanConfig.unique_id = "quarto_fan_01";
+    fanConfig.command_topic = "home/bedroom/fan/power";
+    fanConfig.state_topic = "home/bedroom/fan/state";
+    fanConfig.speed_command_topic = "home/bedroom/fan/speed/set";
+    fanConfig.speed_state_topic = "home/bedroom/fan/speed/state";
+    fanConfig.speeds = "off,low,medium,high"; // Opcional, para controle discreto
+
+    mqttManager->addComponent(fanConfig);
+
+    meuMQTT.initMQTT("ESP32_01", "Meu ESP32 Dinâmico");
     ArduinoOTA.setPort(OTA_PORT);
     ArduinoOTA.setPassword(OTA_PASSWORD);
     Serial.println("Iniciando OTA...");
@@ -47,29 +88,14 @@ void loop()
     // updateOTA();
     // meuModulo.runModule1();
     // meuDriver.readDriver1();
-    // meuWiFi.handleWiFi();
-    // meuMQTT.handleMQTT();
     ArduinoOTA.handle();
     // Envia uma mensagem a cada 10 segundos
     static unsigned long lastSend = 0;
     if (millis() - lastSend >= 10000)
     {
+        // float temp = lerSensorTemperatura(); // Sua função aqui
+        float temp = 25.5;
+        meuMQTT.publishSensorData("temp_sensor1", temp);
         lastSend = millis();
-        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, discovery_message.c_str());
-        // meuMQTT.publishMessage(MQTT_TOPIC_PUB, "Mensagem enviada a cada 10 segundos");
-        // Serial.println("Mensagem enviada a cada 10 segundos");
     }
 }
-
-// void updateOTA()
-// {
-//     WiFi.mode(WIFI_STA);
-//     WiFi.begin(ssid, password);
-//     while (WiFi.status() != WL_CONNECTED)
-//     {
-//         delay(1000);
-//         Serial.println("Conectando ao Wi-Fi...");
-//     }
-//     Serial.println("Conectado ao Wi-Fi!");
-//     ArduinoOTA.begin(OTA_PORT, OTA_PASSWORD);
-// }

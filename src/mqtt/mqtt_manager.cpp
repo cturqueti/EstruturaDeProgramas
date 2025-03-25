@@ -1,12 +1,13 @@
 #include "mqtt_manager.h"
 #include "pinout.h"
+#include "utils.h"
 
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;
 
 MQTTManager::MQTTManager() : _mqttClient(_espClient)
 {
-    _mqttClient.setBufferSize(MQTT_MAX_PACKET_SIZE);
+    _mqttClient.setBufferSize(2048);
 }
 
 MQTTManager::~MQTTManager()
@@ -36,16 +37,34 @@ void MQTTManager::addComponent(const ComponentConfig &config)
     _components.push_back(config);
 
     // Configura GPIO se for saída
-    if (config.type == ComponentType::SWITCH)
+    switch (config.type)
     {
+    case ComponentType::SWITCH:
+        Serial.printf("Configurando GPIO %d como saída\n", config.gpio);
         pinMode(config.gpio, OUTPUT);
         digitalWrite(config.gpio, LOW);
+        break;
+
+    case ComponentType::FAN:
+        Serial.printf("Configurando GPIO %d como saída\n", config.gpio);
+        pinMode(config.gpio, OUTPUT);
+        analogWrite(config.gpio, 0);
+        break;
+
+    default:
+        break;
     }
 }
 
 void MQTTManager::loop()
 {
     _mqttClient.loop();
+    static unsigned long lastUpdate = 0;
+    if (millis() - lastUpdate > 30000)
+    { // A cada 30 segundos
+        _mqttClient.publish(generateTopic(_device_id, "status").c_str(), "online", true);
+        lastUpdate = millis();
+    }
 }
 
 void MQTTManager::publishSensorData(const String &unique_id, float value)
@@ -150,17 +169,12 @@ void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
     Serial.println("------------- MQTT CALLBACK ---------------");
 
     // Garante terminação nula para o payload
-    if (length > 0)
-    {
-        payload[length] = '\0';
-    }
-    else
-    {
-        payload = (byte *)""; // Payload vazio
-    }
+    char payloadStr[length + 1];
+    memcpy(payloadStr, payload, length);
+    payloadStr[length] = '\0';
 
     String strTopic = String(topic);
-    String strPayload = String((char *)payload);
+    String strPayload = String(payloadStr);
 
     Serial.printf("[MQTT] Mensagem recebida - Tópico: %s, Payload: %s\n",
                   strTopic.c_str(), strPayload.c_str());
@@ -169,10 +183,26 @@ void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         if (component.command_topic.equals(strTopic))
         {
-            Serial.printf("Processando comando para %s\n", component.name.c_str());
-            handleSwitchMessage(component, strPayload);
+            if (component.type == ComponentType::SWITCH)
+            {
+                Serial.println("Entrou no SWITCH");
+                handleSwitchMessage(component, strPayload);
+            }
+            else if (component.type == ComponentType::FAN)
+            {
+                Serial.println("Entrou no FAN");
+                handleFanMessage(component, strPayload);
+            }
             Serial.println("-------------------------------------------");
-            return; // Encerra após encontrar o componente correspondente
+            return;
+        }
+        else if (component.type == ComponentType::FAN &&
+                 !component.speed_command_topic.isEmpty() &&
+                 component.speed_command_topic.equals(strTopic))
+        {
+            handleFanSpeedMessage(component, strPayload);
+            Serial.println("-------------------------------------------");
+            return;
         }
     }
 
@@ -193,10 +223,15 @@ void MQTTManager::subscribeAllCommandTopics()
 {
     for (const auto &component : _components)
     {
-        if (component.type == ComponentType::SWITCH && !component.command_topic.isEmpty())
+        if ((component.type == ComponentType::SWITCH || component.type == ComponentType::FAN) && !component.command_topic.isEmpty())
         {
             _mqttClient.subscribe(component.command_topic.c_str());
             Serial.printf("Inscrito no tópico: %s\n", component.command_topic.c_str());
+        }
+        if (component.type == ComponentType::FAN && !component.speed_command_topic.isEmpty())
+        {
+            _mqttClient.subscribe(component.speed_command_topic.c_str());
+            Serial.printf("Inscrito no tópico de velocidade: %s\n", component.speed_command_topic.c_str());
         }
     }
 }
@@ -205,15 +240,25 @@ void MQTTManager::subscribeAllCommandTopics()
 
 void MQTTManager::publishDiscovery(const ComponentConfig &config)
 {
-    JsonDocument doc;
-    JsonArray identifiers = doc["device"].to<JsonArray>();
-    identifiers.add(_device_id);
 
-    doc["device"]["name"] = _device_name;
-    doc["device"]["model"] = "ESP32";
-    doc["device"]["manufacturer"] = "Sideout";
+    JsonDocument doc;
+
+    // Device info (comum a todos os componentes)
+    JsonObject device = doc["device"].to<JsonObject>();
+    JsonArray identifiers = device["identifiers"].to<JsonArray>();
+    identifiers.add(_device_id); // Deve ser array mesmo com um único ID
+    // identifiers.add(_device_id);
+    // device["identifiers"] = "ESP32_01";
+    device["name"] = _device_name;
+    device["model"] = "ESP32";
+    device["manufacturer"] = "Sideout";
+    device["sw_version"] = "1.0.0";
+    device["configuration_url"] = "http://" + WiFi.localIP().toString();
+
     doc["name"] = config.name;
     doc["unique_id"] = config.unique_id;
+    doc["availability_topic"] = generateTopic(_device_id, "status");
+    // doc["availability_topic"] = String("homeassistant/") + _device_id + String("/status");
 
     switch (config.type)
     {
@@ -222,21 +267,78 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
         doc["state_topic"] = config.state_topic;
         doc["payload_on"] = "ON";
         doc["payload_off"] = "OFF";
+        doc["optimistic"] = false;
         break;
 
-    case ComponentType::SENSOR:
-        doc["state_topic"] = config.state_topic;
-        doc["unit_of_measurement"] = "°C"; // Ajuste conforme necessário
+    case ComponentType::FAN:
+    {
+        doc["command_topic"] = generateTopic(_device_id, "fan", config.unique_id, "power/command");
+        doc["state_topic"] = generateTopic(_device_id, "fan", config.unique_id, "power/state");
+        doc["percentage_command_topic"] = generateTopic(_device_id, "fan", config.unique_id, "speed/command");
+        doc["percentage_state_topic"] = generateTopic(_device_id, "fan", config.unique_id, "speed/state");
+        Serial.printf("Verificando o s caracteres : %s\n", config.unique_id);
+
+        // Configurações numéricas
+        doc["percentage_step"] = 1;
+        doc["speed_range_min"] = 1;
+        doc["speed_range_max"] = 100;
+
+        // Preset modes como array
+        JsonArray preset_modes = doc["preset_modes"].to<JsonArray>();
+        preset_modes.add("auto");
+        preset_modes.add("smart");
         break;
     }
 
-    String topic = "homeassistant/" +
-                   String(config.type == ComponentType::SWITCH ? "switch" : "sensor") +
-                   "/" + config.unique_id + "/config";
+    case ComponentType::SENSOR:
+        doc["state_topic"] = config.state_topic;
+        if (!config.unit_of_measurement.isEmpty())
+        {
+            doc["unit_of_measurement"] = config.unit_of_measurement;
+        }
+        if (!config.device_class.isEmpty())
+        {
+            doc["device_class"] = config.device_class;
+        }
+        break;
+    }
+
+    // Determina o tipo correto para o tópico
+    String component_type;
+    switch (config.type)
+    {
+    case ComponentType::SWITCH:
+        component_type = "switch";
+        break;
+    case ComponentType::FAN:
+        component_type = "fan";
+        break;
+    case ComponentType::SENSOR:
+        component_type = "sensor";
+        break;
+    default:
+        component_type = "sensor";
+        break;
+    }
 
     String payload;
     serializeJson(doc, payload);
-    _mqttClient.publish(topic.c_str(), payload.c_str(), true);
+
+    Serial.printf("[DEBUG] Tentando publicar no tópico: %s\n", generateTopic(_device_id, component_type, config.unique_id, "config").c_str());
+    Serial.println(payload);
+    Serial.printf("[DEBUG] Tamanho do payload: %d bytes\n", payload.length());
+
+    bool published = _mqttClient.publish(generateTopic(_device_id, component_type, config.unique_id, "config").c_str(), payload.c_str(), true);
+
+    if (!published)
+    {
+        Serial.printf("[ERRO] Falha ao publicar. Estado do MQTT: %d\n", _mqttClient.state());
+        Serial.printf("[ERRO] Tamanho máximo do buffer: %d\n", _mqttClient.getBufferSize());
+    }
+    else
+    {
+        _mqttClient.publish(generateTopic(_device_id, "status").c_str(), "online", true);
+    }
 }
 
 void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const String &payload)
@@ -315,4 +417,51 @@ void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUp
 
     lastUpdate = millis();
     Serial.println("[SENSORES] Atualização concluída");
+}
+
+void MQTTManager::handleFanMessage(const ComponentConfig &config, const String &payload)
+{
+    bool state = (payload == "ON" || payload == "1");
+
+    if (state)
+    {
+        // Se ligar, mantém a última velocidade conhecida ou padrão
+        int speed = config.last_speed > 0 ? config.last_speed : 50; // 50% como padrão
+        ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
+    }
+    else
+    {
+        ledcWrite(config.pwm_channel, 0); // Desliga o fan
+    }
+
+    // Publica estado
+    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+
+    // Executa callback se definido
+    if (config.callback)
+    {
+        config.callback(state);
+    }
+}
+
+void MQTTManager::handleFanSpeedMessage(const ComponentConfig &config, const String &payload)
+{
+    int speed = payload.toInt();
+    speed = constrain(speed, 0, 100); // Garante que está entre 0-100%
+
+    // Mapeia para 0-255 (8 bits)
+    int pwmValue = map(speed, 0, 100, 0, 255);
+    analogWrite(config.gpio, pwmValue);
+
+    // Publica o estado da velocidade
+    if (!config.speed_state_topic.isEmpty())
+    {
+        _mqttClient.publish(config.speed_state_topic.c_str(), String(speed).c_str(), true);
+    }
+
+    // Se tinha um callback de velocidade, executa
+    if (config.speed_callback)
+    {
+        config.speed_callback(speed);
+    }
 }

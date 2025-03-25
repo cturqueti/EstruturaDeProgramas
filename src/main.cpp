@@ -19,6 +19,7 @@
 #include <ArduinoOTA.h>
 #include "esp_log.h"
 #include <ArduinoJson.h>
+#include "utils.h"
 
 Peripherals meuPeripherals;
 Module1 meuModulo;
@@ -34,16 +35,16 @@ void setup()
     meuModulo.initModule1();
     meuDriver.initDriver1();
     meuWiFi.initWiFi();
+    String device_id = "ESP32_01";
 
-    // 2. Adiciona componentes dinamicamente
     ComponentConfig led1 = {
-        "LED GPIO 2",
-        "led_gpio2",
-        ComponentType::SWITCH,
-        2,
-        "homeassistant/switch/led_gpio2/command",
-        "homeassistant/switch/led_gpio2/state",
-        [](bool state)
+        .name = "LED GPIO 2",
+        .unique_id = "led_Gpio2",
+        .type = ComponentType::SWITCH,
+        .gpio = 255,
+        .command_topic = generateTopic(device_id, "switch", led1.unique_id, "command"),
+        .state_topic = generateTopic(device_id, "switch", led1.unique_id, "state"),
+        .callback = [](bool state)
         {
             digitalWrite(2, state);
             Serial.printf("LED 2 alterado para %s\n", state ? "ON" : "OFF");
@@ -51,31 +52,29 @@ void setup()
     meuMQTT.addComponent(led1);
 
     ComponentConfig tempSensor = {
-        "Sensor Temperatura",
-        "temp_sensor1",
-        ComponentType::SENSOR,
-        255, // Não usa GPIO
-        "",  // Sem command topic
-        "homeassistant/sensor/temp_sensor1/state"};
+        .name = "Temperatura do Quarto",                                                  // 1º campo
+        .unique_id = "quarto_Temperature",                                                // 2º campo
+        .type = ComponentType::SENSOR,                                                    // 3º campo
+        .gpio = 255,                                                                      // 4º campo (opcional, valor padrão)
+        .command_topic = "",                                                              // 5º campo (opcional)
+        .state_topic = generateTopic(device_id, "sensor", tempSensor.unique_id, "state"), // 6º campo (obrigatório)
+        .unit_of_measurement = "°C",                                                      // Campo da struct (ajuste a ordem conforme necessário)
+        .device_class = "temperature"                                                     // Novo campo (deve estar após os campos existentes)
+    };
     meuMQTT.addComponent(tempSensor);
 
-    // ComponentConfig fanConfig;
-    // fanConfig.type = ComponentType::FAN;
-    // fanConfig.gpio = 2;              // GPIO 3
-    // fanConfig.pwm_channel = 0;       // Canal PWM 0
-    // fanConfig.pwm_frequency = 25000; // 25kHz (frequência comum para fans)
-    // fanConfig.pwm_resolution = 8;    // 8 bits (0-255)
-    // fanConfig.name = "Ventilador Quarto";
-    // fanConfig.unique_id = "quarto_fan_01";
-    // fanConfig.command_topic = "home/bedroom/fan/power";
-    // fanConfig.state_topic = "home/bedroom/fan/state";
-    // fanConfig.speed_command_topic = "home/bedroom/fan/speed/set";
-    // fanConfig.speed_state_topic = "home/bedroom/fan/speed/state";
-    // fanConfig.speeds = "off,low,medium,high"; // Opcional, para controle discreto
+    ComponentConfig fanConfig = {
+        .name = "Ventilador Quarto",
+        .unique_id = "quarto_Fan_01",
+        .type = ComponentType::FAN,
+        .gpio = 2,
+        .command_topic = generateTopic(device_id, "fan", fanConfig.unique_id, "power"),
+        .state_topic = generateTopic(device_id, "fan", fanConfig.unique_id, "state"),
+        .speed_command_topic = generateTopic(device_id, "fan", fanConfig.unique_id, "speed/command"),
+        .speed_state_topic = generateTopic(device_id, "fan", fanConfig.unique_id, "speed/state")};
+    meuMQTT.addComponent(fanConfig);
 
-    // mqttManager->addComponent(fanConfig);
-
-    meuMQTT.initMQTT("ESP32_01", "Meu ESP32 Dinâmico");
+    meuMQTT.initMQTT("ESP32_01", "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
     ArduinoOTA.setPort(OTA_PORT);
     ArduinoOTA.setPassword(OTA_PASSWORD);
     Serial.println("Iniciando OTA...");

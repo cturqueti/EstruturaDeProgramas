@@ -20,6 +20,7 @@ enum class ComponentType
     FAN,           ///< Ventiladores (velocidade variável)
     LOCK,          ///< Fechaduras inteligentes
     VACUUM,        ///< Aspiradores robôs
+    MOTOR,         ///< Controles motorizados
 
     /*---------- Dispositivos de Mídia ----------*/
     CAMERA,       ///< Transmissão de vídeo ou imagens estáticas
@@ -59,10 +60,11 @@ enum class ComponentType
     PERSISTENT_NOTIFICATION, ///< Notificações persistentes
 
     /*---------- Componentes de Integração ----------*/
-    CALENDAR, ///< Integração com calendários
-    MAILBOX,  ///< Monitoramento de caixa postal
-    REMOTE,   ///< Controle remoto infravermelho
-    NOTIFY    ///< Serviços de notificação
+    CALENDAR,   ///< Integração com calendários
+    MAILBOX,    ///< Monitoramento de caixa postal
+    REMOTE,     ///< Controle remoto infravermelho
+    NOTIFY,     ///< Serviços de notificação
+    WIFI_SIGNAL ///< Monitoramento de sinal de Wi-Fi
 };
 
 struct ComponentConfig
@@ -76,6 +78,7 @@ struct ComponentConfig
     std::function<void(bool)> callback;     // Para switches
     std::function<float()> sensor_callback; // Para sensores
     String unit_of_measurement;
+    String device_class; // ← Adicione esta linha (recomendo após unit_of_measurement)
     // Campos específicos para fan
     int pwm_channel;
     int pwm_frequency;
@@ -83,6 +86,8 @@ struct ComponentConfig
     String speed_command_topic;
     String speed_state_topic;
     String speeds;
+    String percentage_command_topic; // Pode ser o mesmo que speed_command_topic
+    String percentage_state_topic;   // Pode ser o mesmo que speed_state_topic
     int last_speed;
     std::function<void(int)> speed_callback;
 };

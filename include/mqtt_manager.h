@@ -6,6 +6,7 @@
 #include "secrets.h"
 #include "ArduinoJson.h"
 #include <vector>
+#include <queue>
 #include <functional>
 #include "config_types.h"
 
@@ -23,6 +24,13 @@ extern MQTTManager *mqttManager;
 class MQTTManager
 {
 public:
+    struct Message
+    {
+        char topic[128];
+        char payload[512];
+        bool retained;
+    };
+
     MQTTManager();
     ~MQTTManager();
     void initMQTT(const String &device_id, const String &device_name);
@@ -53,6 +61,7 @@ private:
     String _discoverTopic;
     String _commandTopic;
     String _stateTopic;
+    std::queue<Message> _messageQueue;
 
     void publishDiscovery(const ComponentConfig &config);
     void handleSwitchMessage(const ComponentConfig &config, const String &payload);

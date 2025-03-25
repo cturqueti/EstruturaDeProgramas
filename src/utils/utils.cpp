@@ -13,7 +13,7 @@ void Utils::customDelay(unsigned long ms)
 String generateTopic(const String &device_id, const String &component_type,
                      const String &unique_id, const String &suffix)
 {
-    return "homeassistant/" + device_id + "/" + component_type + "/" + unique_id + "/" + suffix;
+    return "homeassistant/" + component_type + "/" + device_id + "/" + unique_id + "/" + suffix;
 }
 
 String generateTopic(const String &device_id, const String &suffix)

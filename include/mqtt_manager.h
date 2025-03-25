@@ -63,6 +63,7 @@ private:
     String _stateTopic;
     std::queue<Message> _messageQueue;
 
+    void publishInitialSensor();
     void publishDiscovery(const ComponentConfig &config);
     void handleSwitchMessage(const ComponentConfig &config, const String &payload);
     void handleSensorUpdate(const ComponentConfig &config, bool forceUpdate = false);

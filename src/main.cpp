@@ -35,8 +35,8 @@ void setup()
     meuModulo.initModule1();
     meuDriver.initDriver1();
     meuWiFi.initWiFi();
-    String device_id = "ESP32_01";
 
+    String device_id = "ESP32_01";
     ComponentConfig led1 = {
         .name = "LED GPIO 2",
         .unique_id = "led_Gpio2",

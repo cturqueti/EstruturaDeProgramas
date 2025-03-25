@@ -146,6 +146,8 @@ void MQTTManager::reconnectMQTT()
         {
             Serial.println("Conectado ao broker MQTT!");
 
+            // publishInitialSensor();
+
             // Publica todas as mensagens de discovery
             publishAllDiscoveries();
 
@@ -238,6 +240,27 @@ void MQTTManager::subscribeAllCommandTopics()
 
 // -------------------- Private Methods --------------------
 
+void MQTTManager::publishInitialSensor()
+{
+    JsonDocument doc;
+
+    JsonObject device = doc["device"].to<JsonObject>();
+    JsonArray identifiers = device["identifiers"].to<JsonArray>();
+    identifiers.add(_device_id); // Deve ser array mesmo com um único ID
+    doc["name"] = "SensorInicial";
+    doc["unique_id"] = "esp32_device_placeholder";
+    device["name"] = "Meu ESP32 teste";
+    device["model"] = "ESP32";
+    device["manufacturer"] = "Sideout";
+    device["sw_version"] = "1.0.0";
+    doc["state_topic"] = "esp32/placeholder";
+    String payload;
+    serializeJson(doc, payload);
+    String topic;
+    topic = generateTopic(_device_id, "sensor", "device_placeholder", "config");
+    // device["configuration_url"] = "http://" + WiFi.localIP().toString();
+}
+
 void MQTTManager::publishDiscovery(const ComponentConfig &config)
 {
 
@@ -253,7 +276,7 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     device["model"] = "ESP32";
     device["manufacturer"] = "Sideout";
     device["sw_version"] = "1.0.0";
-    device["configuration_url"] = "http://" + WiFi.localIP().toString();
+    // device["configuration_url"] = "http://" + WiFi.localIP().toString();
 
     doc["name"] = config.name;
     doc["unique_id"] = config.unique_id;
@@ -320,6 +343,8 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
         component_type = "sensor";
         break;
     }
+
+    // doc["device_class"] = component_type;
 
     String payload;
     serializeJson(doc, payload);

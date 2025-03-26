@@ -1,8 +1,9 @@
 #include "TemperatureSensor.h"
 
 TemperatureSensor::TemperatureSensor(MQTTManager &mqtt, const String &deviceId, uint8_t analogPin, bool testMode)
-    : _mqtt(mqtt), _analogPin(analogPin), _sensorId("temp_" + deviceId), _testMode(testMode)
+    : _mqtt(mqtt), _analogPin(analogPin), _uniqueId("temp_" + deviceId), _testMode(testMode), _deviceId(deviceId)
 {
+    _stateTopic = generateTopic(_deviceId, "sensor", _uniqueId, "state");
     if (!_testMode)
     {
         pinMode(_analogPin, INPUT);
@@ -13,9 +14,9 @@ void TemperatureSensor::begin()
 {
     ComponentConfig config = {
         .name = "Sensor de Temperatura",
-        .unique_id = _sensorId,
+        .unique_id = _uniqueId,
         .type = ComponentType::SENSOR,
-        .state_topic = generateTopic(DEVICE_ID, "sensor", _sensorId, "state"),
+        .state_topic = _stateTopic,
         .unit_of_measurement = "°C",
         .device_class = "temperature"};
     _mqtt.addComponent(config);
@@ -41,7 +42,7 @@ float TemperatureSensor::readTemperature()
 
 void TemperatureSensor::publishData(float temperature)
 {
-    _mqtt.publishSensorData(_sensorId, temperature);
+    _mqtt.publishSensorData(_uniqueId, temperature);
     Serial.printf("Temperatura publicada: %.2f°C\n", temperature);
 }
 

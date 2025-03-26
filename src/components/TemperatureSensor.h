@@ -4,7 +4,6 @@
 #pragma once
 #include "mqtt_manager.h"
 #include "utils.h"
-#include "config.h"
 
 class TemperatureSensor
 {
@@ -17,7 +16,9 @@ public:
 private:
     MQTTManager &_mqtt;
     uint8_t _analogPin;
-    String _sensorId;
+    String _uniqueId;
+    String _stateTopic;
+    String _deviceId;
     bool _testMode;
     float _testValue = 25.5f; // Valor fixo para testes
 

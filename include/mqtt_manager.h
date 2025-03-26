@@ -50,10 +50,7 @@ private:
     void publishAllDiscoveries();
     void subscribeAllCommandTopics();
     void publishDiscovery(const ComponentConfig &config);
-    void publishInitialSensor();
 
-    // void handleSwitchMessage(const ComponentConfig &config, const String &payload);
-    // void handleSensorUpdate(const ComponentConfig &config, bool forceUpdate = false);
     void handleFanMessage(const ComponentConfig &config, const String &payload);
     void handleFanSpeedMessage(const ComponentConfig &config, const String &payload);
 };

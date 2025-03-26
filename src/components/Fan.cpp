@@ -1,9 +1,10 @@
 #include "Fan.h"
 
 Fan::Fan(MQTTManager &mqtt, const String &deviceId, uint8_t pin)
-    : _mqtt(mqtt), _pin(pin), _uniqueId("fan_" + deviceId + "_" + String(pin))
+    : _mqtt(mqtt), _pin(pin), _uniqueId("fan_" + deviceId + "_" + String(pin)), _deviceId(deviceId)
 {
     pinMode(_pin, OUTPUT);
+    _stateTopic = generateTopic(_deviceId, "switch", _uniqueId, "state");
 }
 
 void Fan::begin()
@@ -13,12 +14,12 @@ void Fan::begin()
         .unique_id = _uniqueId,
         .type = ComponentType::FAN,
         .gpio = _pin,
-        .command_topic = generateTopic(DEVICE_ID, "fan", _uniqueId, "power/command"),
-        .state_topic = generateTopic(DEVICE_ID, "fan", _uniqueId, "power/state"),
+        .command_topic = generateTopic(_deviceId, "fan", _uniqueId, "power/command"),
+        .state_topic = _stateTopic,
         .callback = &Fan::staticPowerCallback,
         .context = this,
-        .speed_command_topic = generateTopic(DEVICE_ID, "fan", _uniqueId, "speed/command"),
-        .speed_state_topic = generateTopic(DEVICE_ID, "fan", _uniqueId, "speed/state"),
+        .speed_command_topic = generateTopic(_deviceId, "fan", _uniqueId, "speed/command"),
+        .speed_state_topic = generateTopic(_deviceId, "fan", _uniqueId, "speed/state"),
         .speed_callback = &Fan::staticSpeedCallback};
 
     _mqtt.addComponent(config);
@@ -33,7 +34,7 @@ void Fan::handlePowerCommand(bool state)
 
     // Publica estado atual
     _mqtt.publishMessage(
-        generateTopic(DEVICE_ID, "fan", _uniqueId, "power/state").c_str(),
+        generateTopic(_deviceId, "fan", _uniqueId, "power/state").c_str(),
         state ? "ON" : "OFF");
 }
 
@@ -50,7 +51,7 @@ void Fan::handleSpeedCommand(int speed)
 
     // Publica estado atual
     _mqtt.publishMessage(
-        generateTopic(DEVICE_ID, "fan", _uniqueId, "speed/state").c_str(),
+        generateTopic(_deviceId, "fan", _uniqueId, "speed/state").c_str(),
         String(speed).c_str());
 }
 

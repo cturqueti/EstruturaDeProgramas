@@ -1,5 +1,6 @@
 #ifndef WIFI_POWER_H
 #define WIFI_POWER_H
+
 #pragma once
 #include <WiFi.h>
 #include "mqtt_manager.h"

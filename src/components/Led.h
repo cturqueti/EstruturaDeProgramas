@@ -4,7 +4,6 @@
 #pragma once
 #include "mqtt_manager.h"
 #include "utils.h"
-#include "config.h"
 
 class Led
 {

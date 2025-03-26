@@ -116,8 +116,6 @@ void MQTTManager::reconnectMQTT()
         {
             Serial.println("Conectado ao broker MQTT!");
 
-            // publishInitialSensor();
-
             // Publica todas as mensagens de discovery
             publishAllDiscoveries();
 
@@ -250,27 +248,6 @@ void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
     Serial.println("-------------------------------------------");
 }
 
-void MQTTManager::publishInitialSensor()
-{
-    JsonDocument doc;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(_device_id); // Deve ser array mesmo com um único ID
-    doc["name"] = "SensorInicial";
-    doc["unique_id"] = "esp32_device_placeholder";
-    device["name"] = "Meu ESP32 teste";
-    device["model"] = "ESP32";
-    device["manufacturer"] = "Sideout";
-    device["sw_version"] = "1.0.0";
-    doc["state_topic"] = "esp32/placeholder";
-    String payload;
-    serializeJson(doc, payload);
-    String topic;
-    topic = generateTopic(_device_id, "sensor", "device_placeholder", "config");
-    // device["configuration_url"] = "http://" + WiFi.localIP().toString();
-}
-
 void MQTTManager::publishDiscovery(const ComponentConfig &config)
 {
 
@@ -375,92 +352,6 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
         _mqttClient.publish(generateTopic(_device_id, "status").c_str(), "online", true);
     }
 }
-
-// void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const String &payload)
-// {
-//     bool state = (payload == "ON" || payload == "1");
-
-//     // Executa a ação física
-//     if (config.gpio != 255)
-//     { // Verifica se é um GPIO válido
-//         digitalWrite(config.gpio, state);
-//     }
-
-//     // Executa callback se definido
-//     if (config.callback)
-//     {
-//         config.callback(state, config.context); // Passa o estado e o contexto
-//     }
-
-//     // Publica estado atual
-//     if (!config.state_topic.isEmpty())
-//     {
-//         _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
-//     }
-// }
-
-// void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUpdate)
-// {
-//     static unsigned long lastUpdate = 0;
-//     const unsigned long updateInterval = 30000; // 30 segundos
-
-//     // Verifica se é hora de atualizar
-//     if (!forceUpdate && millis() - lastUpdate < updateInterval)
-//     {
-//         return;
-//     }
-
-//     Serial.println("[SENSORES] Iniciando atualização de sensores...");
-
-//     for (const auto &component : _components)
-//     {
-//         if (component.type == ComponentType::SENSOR && component.sensor_callback)
-//         {
-//             try
-//             {
-//                 // Executa o callback para obter o valor atual
-//                 float currentValue = component.sensor_callback();
-
-//                 // Formata o valor conforme o tipo de sensor
-//                 String payload;
-//                 if (component.unit_of_measurement == "°C" ||
-//                     component.unit_of_measurement == "°F")
-//                 {
-//                     payload = String(currentValue, 1); // 1 casa decimal para temperaturas
-//                 }
-//                 else
-//                 {
-//                     payload = String(currentValue);
-//                 }
-
-//                 // Publica no tópico de estado
-//                 if (_mqttClient.connected())
-//                 {
-//                     bool published = _mqttClient.publish(
-//                         component.state_topic.c_str(),
-//                         payload.c_str(),
-//                         true // retained
-//                     );
-
-//                     Serial.printf("[SENSOR] %s: %s %s (%s)\n",
-//                                   component.name.c_str(),
-//                                   payload.c_str(),
-//                                   component.unit_of_measurement.c_str(),
-//                                   published ? "Publicado" : "Falha na publicação");
-//                 }
-//             }
-//             catch (const std::exception &e)
-//             {
-//                 Serial.printf("[ERRO] Falha ao ler sensor %s: %s\n",
-//                               component.name.c_str(),
-//                               e.what());
-//             }
-//         }
-//     }
-
-//     lastUpdate = millis();
-//     Serial.println("[SENSORES] Atualização concluída");
-// }
 
 void MQTTManager::handleFanMessage(const ComponentConfig &config, const String &payload)
 {

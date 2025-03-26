@@ -75,10 +75,12 @@ struct ComponentConfig
     uint8_t gpio;
     String command_topic;
     String state_topic;
-    std::function<void(bool)> callback;     // Para switches
+    std::function<void(bool, void *)> callback; // Para switches
+    void *context;
     std::function<float()> sensor_callback; // Para sensores
     String unit_of_measurement;
     String device_class; // ← Adicione esta linha (recomendo após unit_of_measurement)
+
     // Campos específicos para fan
     int pwm_channel;
     int pwm_frequency;
@@ -89,5 +91,6 @@ struct ComponentConfig
     String percentage_command_topic; // Pode ser o mesmo que speed_command_topic
     String percentage_state_topic;   // Pode ser o mesmo que speed_state_topic
     int last_speed;
-    std::function<void(int)> speed_callback;
+    std::function<void(int, void *)> speed_callback;
+    void *speed_context;
 };

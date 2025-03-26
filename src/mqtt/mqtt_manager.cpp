@@ -40,15 +40,23 @@ void MQTTManager::addComponent(const ComponentConfig &config)
     switch (config.type)
     {
     case ComponentType::SWITCH:
-        Serial.printf("Configurando GPIO %d como saída\n", config.gpio);
-        pinMode(config.gpio, OUTPUT);
-        digitalWrite(config.gpio, LOW);
+
+        if (config.gpio != 255)
+        {
+            Serial.printf("[DEBUG] Configurando GPIO %d como saída\n", config.gpio);
+            pinMode(config.gpio, OUTPUT);
+            digitalWrite(config.gpio, LOW);
+        }
         break;
 
     case ComponentType::FAN:
-        Serial.printf("Configurando GPIO %d como saída\n", config.gpio);
-        pinMode(config.gpio, OUTPUT);
-        analogWrite(config.gpio, 0);
+
+        if (config.gpio != 255)
+        {
+            Serial.printf("[DEBUG] Configurando GPIO %d como saída\n", config.gpio);
+            pinMode(config.gpio, OUTPUT);
+            analogWrite(config.gpio, 0);
+        }
         break;
 
     default:
@@ -74,47 +82,9 @@ void MQTTManager::publishSensorData(const String &unique_id, float value)
         if (component.unique_id == unique_id && component.type == ComponentType::SENSOR)
         {
             _mqttClient.publish(component.state_topic.c_str(), String(value).c_str(), true);
+            Serial.printf("Publicando sensor %s: %f\n", component.name.c_str(), value);
         }
     }
-}
-
-void connectMQTTStatic(void *pvParameters)
-{
-    // Converte o parâmetro de volta para o tipo MQTTManager*
-    MQTTManager *instance = static_cast<MQTTManager *>(pvParameters);
-    // Chama a função membro
-    instance->reconnectMQTT();
-    while (true)
-    {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        if (!instance->isConnected())
-        {
-            instance->reconnectMQTT();
-            Serial.println("Reconectado ao broker MQTT!");
-        }
-        else
-        {
-            instance->loop();
-        }
-    }
-    vTaskDelete(nullptr);
-}
-
-void MQTTManager::handleMQTT()
-{
-    if (!_mqttClient.connected())
-    {
-        Serial.println("Conectando ao broker MQTT...");
-        // Verifica se a tarefa MQTT Connect está ativa
-        if (!_mqttTaskActive)
-        {
-            // Cria uma nova tarefa para reconectar
-            BaseType_t result = xTaskCreate(connectMQTTStatic, "MQTT Connect", 8192, this, 2, NULL);
-            Serial.println("Tarefa de MQTT criada...");
-            _mqttTaskActive = true; // Marca a tarefa como ativa
-        }
-    }
-    _mqttClient.loop(); // Mantém a conexão ativa
 }
 
 void MQTTManager::publishMessage(const char *topic, const char *payload)
@@ -166,52 +136,6 @@ void MQTTManager::reconnectMQTT()
     }
 }
 
-void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
-{
-    Serial.println("------------- MQTT CALLBACK ---------------");
-
-    // Garante terminação nula para o payload
-    char payloadStr[length + 1];
-    memcpy(payloadStr, payload, length);
-    payloadStr[length] = '\0';
-
-    String strTopic = String(topic);
-    String strPayload = String(payloadStr);
-
-    Serial.printf("[MQTT] Mensagem recebida - Tópico: %s, Payload: %s\n",
-                  strTopic.c_str(), strPayload.c_str());
-
-    for (const auto &component : _components)
-    {
-        if (component.command_topic.equals(strTopic))
-        {
-            if (component.type == ComponentType::SWITCH)
-            {
-                Serial.println("Entrou no SWITCH");
-                handleSwitchMessage(component, strPayload);
-            }
-            else if (component.type == ComponentType::FAN)
-            {
-                Serial.println("Entrou no FAN");
-                handleFanMessage(component, strPayload);
-            }
-            Serial.println("-------------------------------------------");
-            return;
-        }
-        else if (component.type == ComponentType::FAN &&
-                 !component.speed_command_topic.isEmpty() &&
-                 component.speed_command_topic.equals(strTopic))
-        {
-            handleFanSpeedMessage(component, strPayload);
-            Serial.println("-------------------------------------------");
-            return;
-        }
-    }
-
-    Serial.println("Nenhum componente correspondente encontrado para o tópico");
-    Serial.println("-------------------------------------------");
-}
-
 void MQTTManager::publishAllDiscoveries()
 {
     for (const auto &component : _components)
@@ -239,6 +163,92 @@ void MQTTManager::subscribeAllCommandTopics()
 }
 
 // -------------------- Private Methods --------------------
+void connectMQTTStatic(void *pvParameters)
+{
+    // Converte o parâmetro de volta para o tipo MQTTManager*
+    MQTTManager *instance = static_cast<MQTTManager *>(pvParameters);
+    // Chama a função membro
+    instance->reconnectMQTT();
+    while (true)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        if (!instance->isConnected())
+        {
+            instance->reconnectMQTT();
+            Serial.println("Reconectado ao broker MQTT!");
+        }
+        else
+        {
+            instance->loop();
+        }
+    }
+    vTaskDelete(nullptr);
+}
+
+void MQTTManager::handleMQTT()
+{
+    if (!_mqttClient.connected())
+    {
+        Serial.println("Conectando ao broker MQTT...");
+        // Verifica se a tarefa MQTT Connect está ativa
+        if (!_mqttTaskActive)
+        {
+            // Cria uma nova tarefa para reconectar
+            BaseType_t result = xTaskCreate(connectMQTTStatic, "MQTT Connect", 8192, this, 2, NULL);
+            Serial.println("Tarefa de MQTT criada...");
+            _mqttTaskActive = true; // Marca a tarefa como ativa
+        }
+    }
+    _mqttClient.loop(); // Mantém a conexão ativa
+}
+
+void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    Serial.println("------------- MQTT CALLBACK ---------------");
+
+    // Garante terminação nula para o payload
+    char payloadStr[length + 1];
+    memcpy(payloadStr, payload, length);
+    payloadStr[length] = '\0';
+    bool state = 0;
+
+    String strTopic = String(topic);
+    String strPayload = String(payloadStr);
+
+    Serial.printf("[MQTT] Mensagem recebida - Tópico: %s, Payload: %s\n",
+                  strTopic.c_str(), strPayload.c_str());
+
+    for (const auto &component : _components)
+    {
+        if (component.command_topic.equals(strTopic))
+        {
+            switch (component.type)
+            {
+            case ComponentType::SWITCH:
+                state = (strPayload == "ON" || strPayload == "1");
+                component.callback(state, component.context);
+                // handleSwitchMessage(component, strPayload);
+                return;
+
+            case ComponentType::FAN:
+                state = (strPayload == "ON" || strPayload == "1");
+                component.callback(state, component.context);
+                return;
+            }
+        }
+        else if (component.type == ComponentType::FAN &&
+                 component.speed_command_topic.equals(strTopic) &&
+                 component.speed_callback)
+        {
+            int speed = strPayload.toInt();
+            component.speed_callback(speed, component.context);
+            return;
+        }
+    }
+
+    Serial.println("Nenhum componente correspondente encontrado para o tópico");
+    Serial.println("-------------------------------------------");
+}
 
 void MQTTManager::publishInitialSensor()
 {
@@ -366,106 +376,114 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     }
 }
 
-void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const String &payload)
-{
-    bool state = (payload == "ON" || payload == "1");
-    digitalWrite(config.gpio, state);
+// void MQTTManager::handleSwitchMessage(const ComponentConfig &config, const String &payload)
+// {
+//     bool state = (payload == "ON" || payload == "1");
 
-    // Executa callback se definido
-    if (config.callback)
-    {
-        config.callback(state);
-    }
+//     // Executa a ação física
+//     if (config.gpio != 255)
+//     { // Verifica se é um GPIO válido
+//         digitalWrite(config.gpio, state);
+//     }
 
-    // Publica estado atual
-    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
-}
+//     // Executa callback se definido
+//     if (config.callback)
+//     {
+//         config.callback(state, config.context); // Passa o estado e o contexto
+//     }
 
-void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUpdate)
-{
-    static unsigned long lastUpdate = 0;
-    const unsigned long updateInterval = 30000; // 30 segundos
+//     // Publica estado atual
+//     if (!config.state_topic.isEmpty())
+//     {
+//         _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+//     }
+// }
 
-    // Verifica se é hora de atualizar
-    if (!forceUpdate && millis() - lastUpdate < updateInterval)
-    {
-        return;
-    }
+// void MQTTManager::handleSensorUpdate(const ComponentConfig &config, bool forceUpdate)
+// {
+//     static unsigned long lastUpdate = 0;
+//     const unsigned long updateInterval = 30000; // 30 segundos
 
-    Serial.println("[SENSORES] Iniciando atualização de sensores...");
+//     // Verifica se é hora de atualizar
+//     if (!forceUpdate && millis() - lastUpdate < updateInterval)
+//     {
+//         return;
+//     }
 
-    for (const auto &component : _components)
-    {
-        if (component.type == ComponentType::SENSOR && component.sensor_callback)
-        {
-            try
-            {
-                // Executa o callback para obter o valor atual
-                float currentValue = component.sensor_callback();
+//     Serial.println("[SENSORES] Iniciando atualização de sensores...");
 
-                // Formata o valor conforme o tipo de sensor
-                String payload;
-                if (component.unit_of_measurement == "°C" ||
-                    component.unit_of_measurement == "°F")
-                {
-                    payload = String(currentValue, 1); // 1 casa decimal para temperaturas
-                }
-                else
-                {
-                    payload = String(currentValue);
-                }
+//     for (const auto &component : _components)
+//     {
+//         if (component.type == ComponentType::SENSOR && component.sensor_callback)
+//         {
+//             try
+//             {
+//                 // Executa o callback para obter o valor atual
+//                 float currentValue = component.sensor_callback();
 
-                // Publica no tópico de estado
-                if (_mqttClient.connected())
-                {
-                    bool published = _mqttClient.publish(
-                        component.state_topic.c_str(),
-                        payload.c_str(),
-                        true // retained
-                    );
+//                 // Formata o valor conforme o tipo de sensor
+//                 String payload;
+//                 if (component.unit_of_measurement == "°C" ||
+//                     component.unit_of_measurement == "°F")
+//                 {
+//                     payload = String(currentValue, 1); // 1 casa decimal para temperaturas
+//                 }
+//                 else
+//                 {
+//                     payload = String(currentValue);
+//                 }
 
-                    Serial.printf("[SENSOR] %s: %s %s (%s)\n",
-                                  component.name.c_str(),
-                                  payload.c_str(),
-                                  component.unit_of_measurement.c_str(),
-                                  published ? "Publicado" : "Falha na publicação");
-                }
-            }
-            catch (const std::exception &e)
-            {
-                Serial.printf("[ERRO] Falha ao ler sensor %s: %s\n",
-                              component.name.c_str(),
-                              e.what());
-            }
-        }
-    }
+//                 // Publica no tópico de estado
+//                 if (_mqttClient.connected())
+//                 {
+//                     bool published = _mqttClient.publish(
+//                         component.state_topic.c_str(),
+//                         payload.c_str(),
+//                         true // retained
+//                     );
 
-    lastUpdate = millis();
-    Serial.println("[SENSORES] Atualização concluída");
-}
+//                     Serial.printf("[SENSOR] %s: %s %s (%s)\n",
+//                                   component.name.c_str(),
+//                                   payload.c_str(),
+//                                   component.unit_of_measurement.c_str(),
+//                                   published ? "Publicado" : "Falha na publicação");
+//                 }
+//             }
+//             catch (const std::exception &e)
+//             {
+//                 Serial.printf("[ERRO] Falha ao ler sensor %s: %s\n",
+//                               component.name.c_str(),
+//                               e.what());
+//             }
+//         }
+//     }
+
+//     lastUpdate = millis();
+//     Serial.println("[SENSORES] Atualização concluída");
+// }
 
 void MQTTManager::handleFanMessage(const ComponentConfig &config, const String &payload)
 {
     bool state = (payload == "ON" || payload == "1");
 
-    if (state)
+    if (state && config.gpio != 255)
     {
-        // Se ligar, mantém a última velocidade conhecida ou padrão
-        int speed = config.last_speed > 0 ? config.last_speed : 50; // 50% como padrão
-        ledcWrite(config.pwm_channel, map(speed, 0, 100, 0, 255));
+        int speed = config.last_speed > 0 ? config.last_speed : 50;
+        analogWrite(config.gpio, map(speed, 0, 100, 0, 255));
     }
-    else
+    else if (config.gpio != 255)
     {
-        ledcWrite(config.pwm_channel, 0); // Desliga o fan
+        analogWrite(config.gpio, 0);
     }
 
-    // Publica estado
-    _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+    if (!config.state_topic.isEmpty())
+    {
+        _mqttClient.publish(config.state_topic.c_str(), state ? "ON" : "OFF", true);
+    }
 
-    // Executa callback se definido
     if (config.callback)
     {
-        config.callback(state);
+        config.callback(state, config.context); // Passando contexto
     }
 }
 
@@ -487,6 +505,6 @@ void MQTTManager::handleFanSpeedMessage(const ComponentConfig &config, const Str
     // Se tinha um callback de velocidade, executa
     if (config.speed_callback)
     {
-        config.speed_callback(speed);
+        config.speed_callback(speed, config.context);
     }
 }

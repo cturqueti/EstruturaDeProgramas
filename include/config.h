@@ -30,4 +30,6 @@
 
 #define MQTT_ENABLED true
 
+#define DEVICE_ID "ESP32_01"
+
 #endif // CONFIG_H

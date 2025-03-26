@@ -38,9 +38,7 @@ TemperatureSensor tempSensor(meuMQTT, A0, true);
 
 // void connectMQTT(void *pvParameters);
 
-void setup()
-{
-
+void setup() {
     meuPeripherals.initPeripherals();
     meuModulo.initModule1();
     meuDriver.initDriver1();
@@ -58,20 +56,17 @@ void setup()
     ArduinoOTA.begin();
 }
 
-void loop()
-{
+
+void loop() {
     // updateOTA();
 
     ArduinoOTA.handle();
 
     static unsigned long lastSend = millis();
-    if (millis() - lastSend >= 10000)
-    {
+    if (millis() - lastSend >= 10000) {
 
         tempSensor.update();
-
         wifiPower.update();
-
         lastSend = millis();
     }
 }

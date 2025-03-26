@@ -31,9 +31,9 @@ Driver1 meuDriver;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT(DEVICE_ID);
 
-Led led1(meuMQTT, 2);
+Led led1(meuMQTT, 4);
 WifiPower wifiPower(meuMQTT);
-Fan meuFan(meuMQTT, 4);
+Fan meuFan(meuMQTT, 2);
 TemperatureSensor tempSensor(meuMQTT, A0, true);
 
 // void connectMQTT(void *pvParameters);

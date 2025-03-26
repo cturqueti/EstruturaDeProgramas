@@ -1,9 +1,9 @@
 #include "TemperatureSensor.h"
 
-TemperatureSensor::TemperatureSensor(MQTTManager &mqtt, const String &deviceId, uint8_t analogPin, bool testMode)
-    : _mqtt(mqtt), _analogPin(analogPin), _uniqueId("temp_" + deviceId), _testMode(testMode), _deviceId(deviceId)
+TemperatureSensor::TemperatureSensor(MQTTManager &mqtt, uint8_t analogPin, bool testMode)
+    : _mqtt(mqtt), _analogPin(analogPin), _uniqueId("temp_1"), _testMode(testMode)
 {
-    _stateTopic = generateTopic(_deviceId, "sensor", _uniqueId, "state");
+    _stateTopic = generateTopic(_mqtt.getDeviceId(), "sensor", _uniqueId, "state");
     if (!_testMode)
     {
         pinMode(_analogPin, INPUT);

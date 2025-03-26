@@ -8,15 +8,14 @@
 class Led
 {
 public:
-    Led(MQTTManager &mqtt, const String &deviceId, uint8_t pin);
+    Led(MQTTManager &mqtt, uint8_t pin);
     void begin();
 
 private:
     MQTTManager &_mqtt;
     uint8_t _pin;
     String _uniqueId;
-    String _stateTopic;
-    String _deviceId;
+    String _stateTopic, _commandTopic;
 
     // Método de instância para tratar o callback
     void handleStateChange(bool state);

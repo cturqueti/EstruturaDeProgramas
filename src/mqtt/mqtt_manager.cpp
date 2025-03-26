@@ -5,9 +5,10 @@
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;
 
-MQTTManager::MQTTManager() : _mqttClient(_espClient)
+MQTTManager::MQTTManager(const String &deviceId) : _mqttClient(_espClient), _device_id(deviceId)
 {
     _mqttClient.setBufferSize(2048);
+    _availabilityTopic = generateTopic(_device_id, "status");
 }
 
 MQTTManager::~MQTTManager()
@@ -118,6 +119,16 @@ void MQTTManager::reconnectMQTT()
 
             // Publica todas as mensagens de discovery
             publishAllDiscoveries();
+
+            for (const auto &component : _components)
+            {
+                if (component.type == ComponentType::FAN)
+                {
+                    _mqttClient.publish(component.state_topic.c_str(), "false", true);
+                    _mqttClient.publish(component.speed_state_topic.c_str(), "0", true);
+                    //_mqttClient.publish(component.preset_mode_state_topic.c_str(), "auto", true);
+                }
+            }
 
             // Inscreve em todos os tópicos de comando
             subscribeAllCommandTopics();
@@ -257,8 +268,6 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     JsonObject device = doc["device"].to<JsonObject>();
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
     identifiers.add(_device_id); // Deve ser array mesmo com um único ID
-    // identifiers.add(_device_id);
-    // device["identifiers"] = "ESP32_01";
     device["name"] = _device_name;
     device["model"] = "ESP32";
     device["manufacturer"] = "Sideout";
@@ -267,8 +276,7 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
 
     doc["name"] = config.name;
     doc["unique_id"] = config.unique_id;
-    doc["availability_topic"] = generateTopic(_device_id, "status");
-    // doc["availability_topic"] = String("homeassistant/") + _device_id + String("/status");
+    doc["availability_topic"] = _availabilityTopic;
 
     switch (config.type)
     {
@@ -282,11 +290,12 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
 
     case ComponentType::FAN:
     {
-        doc["command_topic"] = generateTopic(_device_id, "fan", config.unique_id, "power/command");
-        doc["state_topic"] = generateTopic(_device_id, "fan", config.unique_id, "power/state");
-        doc["percentage_command_topic"] = generateTopic(_device_id, "fan", config.unique_id, "speed/command");
-        doc["percentage_state_topic"] = generateTopic(_device_id, "fan", config.unique_id, "speed/state");
-        Serial.printf("Verificando o s caracteres : %s\n", config.unique_id);
+        doc["command_topic"] = config.command_topic;
+        doc["state_topic"] = config.state_topic;
+        doc["percentage_command_topic"] = config.speed_command_topic;
+        doc["percentage_state_topic"] = config.speed_state_topic;
+        doc["payload_on"] = "true";
+        doc["payload_off"] = "false";
 
         // Configurações numéricas
         doc["percentage_step"] = 1;
@@ -336,16 +345,20 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     String payload;
     serializeJson(doc, payload);
 
+#ifdef DEBUG_ENABLED
     Serial.printf("[DEBUG] Tentando publicar no tópico: %s\n", generateTopic(_device_id, component_type, config.unique_id, "config").c_str());
     Serial.println(payload);
     Serial.printf("[DEBUG] Tamanho do payload: %d bytes\n", payload.length());
+#endif // DEBUG
 
     bool published = _mqttClient.publish(generateTopic(_device_id, component_type, config.unique_id, "config").c_str(), payload.c_str(), true);
 
     if (!published)
     {
         Serial.printf("[ERRO] Falha ao publicar. Estado do MQTT: %d\n", _mqttClient.state());
+#ifdef DEBUG_ENABLED
         Serial.printf("[ERRO] Tamanho máximo do buffer: %d\n", _mqttClient.getBufferSize());
+#endif // DEBUG
     }
     else
     {

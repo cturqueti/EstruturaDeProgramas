@@ -8,7 +8,7 @@
 class TemperatureSensor
 {
 public:
-    TemperatureSensor(MQTTManager &mqtt, const String &deviceId, uint8_t analogPin, bool testMode = false);
+    TemperatureSensor(MQTTManager &mqtt, uint8_t analogPin, bool testMode = false);
     void begin();
     void update();
     float readTemperature(); // Método público para leitura

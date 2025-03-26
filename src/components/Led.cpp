@@ -1,10 +1,11 @@
 #include "Led.h"
 
-Led::Led(MQTTManager &mqtt, const String &deviceId, uint8_t pin)
-    : _mqtt(mqtt), _pin(pin), _uniqueId("led_Gpio" + String(pin)), _deviceId(deviceId)
+Led::Led(MQTTManager &mqtt, uint8_t pin)
+    : _mqtt(mqtt), _pin(pin), _uniqueId("led_Gpio" + String(pin))
 {
     pinMode(_pin, OUTPUT);
-    _stateTopic = generateTopic(_deviceId, "switch", _uniqueId, "state"); // Armazena o tópico
+    _stateTopic = generateTopic(_mqtt.getDeviceId(), "switch", _uniqueId, "state"); // Armazena o tópico
+    _commandTopic = generateTopic(_mqtt.getDeviceId(), "switch", _uniqueId, "command");
 }
 
 void Led::begin()
@@ -15,7 +16,7 @@ void Led::begin()
         .unique_id = _uniqueId,
         .type = ComponentType::SWITCH,
         .gpio = _pin,
-        .command_topic = generateTopic(_deviceId, "switch", _uniqueId, "command"),
+        .command_topic = _commandTopic,
         .state_topic = _stateTopic, // Usa a variável membro
         .callback = &Led::staticHandleCallback,
         .context = this};

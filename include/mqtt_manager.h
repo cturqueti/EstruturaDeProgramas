@@ -9,6 +9,7 @@
 #include <queue>
 #include <functional>
 #include "config_types.h"
+#include "config.h"
 
 // #define MQTT_MAX_PACKET_SIZE 2048
 
@@ -24,7 +25,7 @@ extern MQTTManager *mqttManager;
 class MQTTManager
 {
 public:
-    MQTTManager();
+    MQTTManager(const String &deviceId);
     ~MQTTManager();
 
     void initMQTT(const String &device_id, const String &device_name);
@@ -33,6 +34,7 @@ public:
     void publishSensorData(const String &unique_id, float value);
     void publishMessage(const char *topic, const char *payload);
     inline bool isConnected() { return _mqttClient.connected(); }
+    inline String getDeviceId() { return _device_id; }
 
     void reconnectMQTT();
 
@@ -41,6 +43,7 @@ private:
     PubSubClient _mqttClient;
     String _device_id;
     String _device_name;
+    String _availabilityTopic;
     std::vector<ComponentConfig> _components;
     bool _mqttTaskActive = false;
 

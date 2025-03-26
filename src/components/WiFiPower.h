@@ -9,7 +9,7 @@
 class WifiPower
 {
 public:
-    WifiPower(MQTTManager &mqtt, const String &deviceId);
+    WifiPower(MQTTManager &mqtt);
     void begin();
     void update();
 
@@ -17,6 +17,5 @@ private:
     MQTTManager &_mqtt;
     String _uniqueId;
     String _stateTopic;
-    String _deviceId;
 };
 #endif // WIFI_POWER_H

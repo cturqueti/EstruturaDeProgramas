@@ -13,7 +13,7 @@
 #define CONFIG_H
 
 // Configurações de debug
-#define DEBUG_ENABLED 1
+// #define DEBUG_ENABLED true
 
 // Constantes de tempo
 #define DELAY_SHORT 100

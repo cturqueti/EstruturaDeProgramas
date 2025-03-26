@@ -1,10 +1,18 @@
 #include "Fan.h"
 
-Fan::Fan(MQTTManager &mqtt, const String &deviceId, uint8_t pin)
-    : _mqtt(mqtt), _pin(pin), _uniqueId("fan_" + deviceId + "_" + String(pin)), _deviceId(deviceId)
+Fan::Fan(MQTTManager &mqtt, uint8_t pin)
+    : _mqtt(mqtt), _pin(pin)
 {
+    _uniqueId = "fan_" + _mqtt.getDeviceId() + "_" + String(pin);
     pinMode(_pin, OUTPUT);
-    _stateTopic = generateTopic(_deviceId, "switch", _uniqueId, "state");
+    _stateTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "on/state");
+    _commandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "on/set");
+    _speedStateTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage_state");
+    _speedCommandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage");
+    // _stateTopic = generateTopic(_deviceId, "fan", "on/state");
+    // _commandTopic = generateTopic(_deviceId, "fan", "on/set");
+    // _speedStateTopic = generateTopic(_deviceId, "fan", "speed/percentage_state");
+    // _speedCommandTopic = generateTopic(_deviceId, "fan", "speed/percentage");
 }
 
 void Fan::begin()
@@ -14,12 +22,13 @@ void Fan::begin()
         .unique_id = _uniqueId,
         .type = ComponentType::FAN,
         .gpio = _pin,
-        .command_topic = generateTopic(_deviceId, "fan", _uniqueId, "power/command"),
+        ///<.command_topic = generateTopic(_deviceId, "fan", _uniqueId, "power/command"),
+        .command_topic = _commandTopic,
         .state_topic = _stateTopic,
         .callback = &Fan::staticPowerCallback,
         .context = this,
-        .speed_command_topic = generateTopic(_deviceId, "fan", _uniqueId, "speed/command"),
-        .speed_state_topic = generateTopic(_deviceId, "fan", _uniqueId, "speed/state"),
+        .speed_command_topic = _speedCommandTopic,
+        .speed_state_topic = _speedStateTopic,
         .speed_callback = &Fan::staticSpeedCallback};
 
     _mqtt.addComponent(config);
@@ -33,9 +42,7 @@ void Fan::handlePowerCommand(bool state)
     Serial.printf("Fan %d: Estado alterado para %s\n", _pin, state ? "ON" : "OFF");
 
     // Publica estado atual
-    _mqtt.publishMessage(
-        generateTopic(_deviceId, "fan", _uniqueId, "power/state").c_str(),
-        state ? "ON" : "OFF");
+    _mqtt.publishMessage(_stateTopic.c_str(), state ? "ON" : "OFF");
 }
 
 void Fan::handleSpeedCommand(int speed)
@@ -51,7 +58,7 @@ void Fan::handleSpeedCommand(int speed)
 
     // Publica estado atual
     _mqtt.publishMessage(
-        generateTopic(_deviceId, "fan", _uniqueId, "speed/state").c_str(),
+        _speedStateTopic.c_str(),
         String(speed).c_str());
 }
 

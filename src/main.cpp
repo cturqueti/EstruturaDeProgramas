@@ -29,12 +29,12 @@ Peripherals meuPeripherals;
 Module1 meuModulo;
 Driver1 meuDriver;
 WiFiManager meuWiFi;
-MQTTManager meuMQTT;
+MQTTManager meuMQTT(DEVICE_ID);
 
-Led led1(meuMQTT, DEVICE_ID, 2);
-WifiPower wifiPower(meuMQTT, DEVICE_ID);
-Fan meuFan(meuMQTT, DEVICE_ID, 4);
-TemperatureSensor tempSensor(meuMQTT, DEVICE_ID, A0, true);
+Led led1(meuMQTT, 2);
+WifiPower wifiPower(meuMQTT);
+Fan meuFan(meuMQTT, 4);
+TemperatureSensor tempSensor(meuMQTT, A0, true);
 
 // void connectMQTT(void *pvParameters);
 

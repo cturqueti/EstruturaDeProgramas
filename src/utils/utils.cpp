@@ -16,6 +16,11 @@ String generateTopic(const String &device_id, const String &component_type,
     return "homeassistant/" + component_type + "/" + device_id + "/" + unique_id + "/" + suffix;
 }
 
+// String generateTopic(const String &device_id, const String &component_type, const String &suffix)
+// {
+//     return "homeassistant/" + component_type + "/" + device_id + "/" + suffix;
+// }
+
 String generateTopic(const String &device_id, const String &suffix)
 {
     return "homeassistant/" + device_id + "/" + suffix;

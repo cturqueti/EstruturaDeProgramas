@@ -13,12 +13,6 @@
 #include "config.h"
 #include "pinout.h"
 
-#ifdef ESP32
-#include <ESPmDNS.h>
-#else
-#include <ESP8266mDNS.h>
-#endif
-
 WiFiManager::WiFiManager()
 {
   // Defina o IP estático
@@ -54,7 +48,7 @@ void connectWiFiStatic(void *parameter)
     if (!instance->isConnected())
     {
       instance->reconnectWIFI();
-      Serial.println("Reconectado ao Wi-Fi!");
+      LOG_DEBUG("Reconectado ao Wi-Fi!");
     }
   }
   vTaskDelete(nullptr);
@@ -69,11 +63,11 @@ void WiFiManager::handleWiFi()
 
   if (!WiFi.isConnected())
   {
-    Serial.println("Conectando ao Wi-Fi...");
+    LOG_DEBUG("Conectando ao Wi-Fi...");
     if (!_wifiTaskActive)
     {
       BaseType_t result = xTaskCreate(connectWiFiStatic, "WiFi Connect", 8192, this, 2, NULL);
-      Serial.println("Tarefa de WiFi criada...");
+      LOG_DEBUG("Tarefa de WiFi criada...");
       _wifiTaskActive = true;
     }
   }
@@ -81,32 +75,53 @@ void WiFiManager::handleWiFi()
 
 bool WiFiManager::reconnectWIFI()
 {
+  Preferences preferences;
+  preferences.begin("wifi-creds", true);
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  String ssid = preferences.getString("ssid", "");
+  String password = preferences.getString("password", "");
+
+  preferences.end();
+
+  if (ssid == "" || password == "")
+  {
+    LOG_ERROR("Credenciais não encontradas na NVS");
+    return false;
+  }
+
+  WiFi.begin(ssid.c_str(), password.c_str());
 
   int retries = 0;
 
   while (WiFi.status() != WL_CONNECTED && retries < 10)
   {
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    Serial.println("Conectando ao Wi-Fi...");
+    LOG_DEBUG("Conectando ao Wi-Fi...");
     delay(1000);
     switch (WiFi.status())
     {
     case WL_NO_SSID_AVAIL:
-      Serial.println("SSID não disponível");
+      LOG_ERROR("SSID indisponível.");
       break;
+
     case WL_CONNECT_FAILED:
-      Serial.println("Falha ao conectar");
+      LOG_ERROR("Falha na conexão.");
       break;
+
     case WL_CONNECTION_LOST:
-      Serial.println("Conexão perdida");
+      LOG_ERROR("Conexão perdida.");
       break;
+
     case WL_DISCONNECTED:
-      Serial.println("Desconectado");
+      LOG_WARN("Desconectado.");
       break;
+
+    case WL_CONNECTED:
+      LOG_INFO("Conectado ao Wi-Fi.");
+      break;
+
     default:
-      Serial.println("Erro desconhecido");
+      LOG_WARN("Desconhecido: %d", WiFi.status());
       break;
     }
   }
@@ -114,14 +129,13 @@ bool WiFiManager::reconnectWIFI()
 
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.println("Conectado ao Wi-Fi!");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
+    LOG_DEBUG("Conectado ao Wi-Fi!");
+    LOG_INFO("IP: %s", WiFi.localIP().toString().c_str());
 
     // Inicialização do mDNS
-    Serial.print("Iniciando o mDNS: ");
+    LOG_DEBUG("Iniciando o mDNS: ");
     MDNS.begin(HOSTNAME);
-    Serial.printf("%s.local\n", HOSTNAME);
+    LOG_INFO("%s.local", HOSTNAME);
     return true;
   }
   else

@@ -1,0 +1,104 @@
+#ifndef CAPTIVE_PORTAL_H
+#define CAPTIVE_PORTAL_H
+
+#include <WiFi.h>
+#include <WebServer.h>
+#include <DNSServer.h>
+#include <Preferences.h>
+
+extern WebServer server;
+extern DNSServer dnsServer;
+
+extern const char *apSSID;
+extern const char *apPassword;
+extern bool shouldStartPortal;
+
+void checkCredentials();
+void startConfigPortal();
+void initializeNormalMode();
+bool isPortalActive();
+void handlePortal();
+void handleRoot();
+void handleSave();
+
+const char config_html[] PROGMEM = R"rawliteral(
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Configuração do Dispositivo</title>
+      <style>
+        :root { --primary: #4a6fa5; --error: #e74c3c; }
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          max-width: 500px;
+          margin: 0 auto;
+          padding: 20px;
+          background-color: #f5f5f5;
+        }
+        .container {
+          background: white;
+          padding: 25px;
+          border-radius: 8px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: var(--primary); text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
+        input {
+          width: 100%; padding: 10px; border: 1px solid #ddd;
+          border-radius: 4px; box-sizing: border-box;
+        }
+        input:required { border-left: 3px solid var(--primary); }
+        button {
+          background: var(--primary); color: white; padding: 12px;
+          border: none; border-radius: 4px; width: 100%;
+          font-size: 16px; cursor: pointer; margin-top: 10px;
+        }
+        button:hover { opacity: 0.9; }
+        .status { text-align: center; margin: 15px 0; font-style: italic; color: #666; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Configuração do Dispositivo</h1>
+        <p class="status">Conectado ao: ESP32-Config</p>
+        
+        <form action='/save' method='post' onsubmit="showLoading()">
+          <div class="form-group">
+            <label for="ssid">WiFi SSID:</label>
+            <input type="text" id="ssid" name="ssid" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="password">Senha WiFi:</label>
+            <input type="password" id="password" name="password">
+          </div>
+          
+          <div class="form-group">
+            <label for="mqtt_user">Usuário MQTT:</label>
+            <input type="text" id="mqtt_user" name="mqtt_user" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="mqtt_pass">Senha MQTT:</label>
+            <input type="password" id="mqtt_pass" name="mqtt_pass" required>
+          </div>
+          
+          <button type="submit" id="submit-btn">Salvar Configuração</button>
+        </form>
+      </div>
+    
+      <script>
+        function showLoading() {
+          const btn = document.getElementById('submit-btn');
+          btn.disabled = true;
+          btn.innerHTML = '<i>Salvando...</i>';
+        }
+      </script>
+    </body>
+    </html>
+    )rawliteral";
+
+#endif // CAPTIVE_PORTAL_H

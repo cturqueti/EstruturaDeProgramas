@@ -32,13 +32,13 @@ void Led::handleStateChange(bool state)
 {
     // 1. Atualiza o estado físico
     digitalWrite(_pin, state);
-    Serial.printf("LED %d alterado para %s\n", _pin, state ? "ON" : "OFF");
+    LOG_DEBUG("LED %d alterado para %s\n", _pin, state ? "ON" : "OFF");
 
     // 2. Retorna o novo estado para o Home Assistant
     _mqtt.publishMessage(_stateTopic.c_str(), state ? "ON" : "OFF");
 
     // 3. (Opcional) Feedback adicional
-    Serial.printf("Estado publicado no tópico: %s\n", _stateTopic.c_str());
+    LOG_DEBUG("Estado publicado no tópico: %s\n", _stateTopic.c_str());
 }
 
 void Led::staticHandleCallback(bool state, void *context)

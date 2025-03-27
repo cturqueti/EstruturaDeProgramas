@@ -1,7 +1,10 @@
 #include "TemperatureSensor.h"
 
 TemperatureSensor::TemperatureSensor(MQTTManager &mqtt, uint8_t analogPin, bool testMode)
-    : _mqtt(mqtt), _analogPin(analogPin), _uniqueId("temp_1"), _testMode(testMode)
+    : _mqtt(mqtt),
+      _analogPin(analogPin),
+      _uniqueId("temp_1"),
+      _testMode(testMode)
 {
     _stateTopic = generateTopic(_mqtt.getDeviceId(), "sensor", _uniqueId, "state");
     if (!_testMode)
@@ -43,7 +46,6 @@ float TemperatureSensor::readTemperature()
 void TemperatureSensor::publishData(float temperature)
 {
     _mqtt.publishSensorData(_uniqueId, temperature);
-    Serial.printf("Temperatura publicada: %.2f°C\n", temperature);
 }
 
 float TemperatureSensor::analogToTemperature(int analogValue)

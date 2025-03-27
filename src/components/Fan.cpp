@@ -1,7 +1,8 @@
 #include "Fan.h"
 
 Fan::Fan(MQTTManager &mqtt, uint8_t pin)
-    : _mqtt(mqtt), _pin(pin)
+    : _mqtt(mqtt),
+      _pin(pin)
 {
     _uniqueId = "fan_" + _mqtt.getDeviceId() + "_" + String(pin);
     pinMode(_pin, OUTPUT);
@@ -9,10 +10,6 @@ Fan::Fan(MQTTManager &mqtt, uint8_t pin)
     _commandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "on/set");
     _speedStateTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage_state");
     _speedCommandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage");
-    // _stateTopic = generateTopic(_deviceId, "fan", "on/state");
-    // _commandTopic = generateTopic(_deviceId, "fan", "on/set");
-    // _speedStateTopic = generateTopic(_deviceId, "fan", "speed/percentage_state");
-    // _speedCommandTopic = generateTopic(_deviceId, "fan", "speed/percentage");
 }
 
 void Fan::begin()
@@ -39,7 +36,7 @@ void Fan::handlePowerCommand(bool state)
 {
     _state = state;
     digitalWrite(_pin, state ? HIGH : LOW);
-    Serial.printf("Fan %d: Estado alterado para %s\n", _pin, state ? "ON" : "OFF");
+    LOG_DEBUG("Fan %d: Estado alterado para %s\n", _pin, state ? "ON" : "OFF");
 
     // Publica estado atual
     _mqtt.publishMessage(_stateTopic.c_str(), state ? "ON" : "OFF");
@@ -54,7 +51,7 @@ void Fan::handleSpeedCommand(int speed)
     int pwmValue = map(speed, 0, 100, 0, 255);
     analogWrite(_pin, pwmValue);
 
-    Serial.printf("Fan %d: Velocidade alterada para %d%%\n", _pin, speed);
+    LOG_DEBUG("Fan %d: Velocidade alterada para %d%%\n", _pin, speed);
 
     // Publica estado atual
     _mqtt.publishMessage(

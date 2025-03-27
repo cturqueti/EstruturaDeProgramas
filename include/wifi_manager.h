@@ -15,6 +15,14 @@
 #include "wifi_config.h"
 #include "secrets.h"
 #include <IPAddress.h>
+#include "utils.h"
+#include "logging_macros.h"
+
+#ifdef ESP32
+#include <ESPmDNS.h>
+#else
+#include <ESP8266mDNS.h>
+#endif
 
 class WiFiManager
 {

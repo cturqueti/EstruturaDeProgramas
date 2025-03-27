@@ -12,15 +12,12 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// Configurações de debug
-// #define DEBUG_ENABLED true
-
 // Constantes de tempo
 #define DELAY_SHORT 100
 #define DELAY_LONG 1000
 
 // Tamanho de buffers
-#define BUFFER_SIZE 128
+// #define BUFFER_SIZE 128
 
 #define OTA_PORT 3232
 
@@ -28,7 +25,7 @@
 
 #define SERIAL_BAUD 115200
 
-#define MQTT_ENABLED true
+// #define MQTT_ENABLED true
 
 #define DEVICE_ID "ESP32_01"
 

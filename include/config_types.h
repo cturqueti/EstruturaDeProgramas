@@ -8,8 +8,7 @@
  * @brief Tipos de componentes suportados pelo Home Assistant via MQTT Discovery
  * @note Atualizado para a versão 2023.12 do Home Assistant
  */
-enum class ComponentType
-{
+enum class ComponentType : uint8_t {
     /*---------- Componentes Básicos ----------*/
     SWITCH,        ///< Interruptores/Relés (ON-OFF simples)
     SENSOR,        ///< Sensores numéricos (temperatura, umidade, etc.)
@@ -67,16 +66,15 @@ enum class ComponentType
     WIFI_SIGNAL ///< Monitoramento de sinal de Wi-Fi
 };
 
-struct ComponentConfig
-{
+struct ComponentConfig {
     String name;
     String unique_id;
     ComponentType type;
     uint8_t gpio;
     String command_topic;
     String state_topic;
-    std::function<void(bool, void *)> callback; // Para switches
-    void *context;
+    std::function<void(bool, void*)> callback; // Para switches
+    void* context;
     std::function<float()> sensor_callback; // Para sensores
     String unit_of_measurement;
     String device_class; // ← Adicione esta linha (recomendo após unit_of_measurement)
@@ -91,6 +89,6 @@ struct ComponentConfig
     String percentage_command_topic; // Pode ser o mesmo que speed_command_topic
     String percentage_state_topic;   // Pode ser o mesmo que speed_state_topic
     int last_speed;
-    std::function<void(int, void *)> speed_callback;
-    void *speed_context;
+    std::function<void(int, void*)> speed_callback;
+    void* speed_context;
 };

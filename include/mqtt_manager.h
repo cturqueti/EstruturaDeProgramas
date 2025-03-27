@@ -10,6 +10,8 @@
 #include <functional>
 #include "config_types.h"
 #include "config.h"
+#include "utils.h"
+#include "logging_macros.h"
 
 // #define MQTT_MAX_PACKET_SIZE 2048
 

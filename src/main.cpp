@@ -11,23 +11,23 @@
 #include "Arduino.h"
 #include "config.h"
 #include "pinout.h"
-#include "module1.h"
-#include "driver1.h"
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
 #include "peripherals.h"
 #include <ArduinoOTA.h>
+#include "ota.h"
 #include "esp_log.h"
 #include <ArduinoJson.h>
 #include "utils.h"
+#include "logging_macros.h"
 #include "components/Led.h"
 #include "components/WifiPower.h"
 #include "components/Fan.h"
 #include "components/TemperatureSensor.h"
+#include "captive_portal.h"
+#include "FS.h"
 
 Peripherals meuPeripherals;
-Module1 meuModulo;
-Driver1 meuDriver;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT(DEVICE_ID);
 
@@ -36,12 +36,33 @@ WifiPower wifiPower(meuMQTT);
 Fan meuFan(meuMQTT, 2);
 TemperatureSensor tempSensor(meuMQTT, A0, true);
 
+void initializeNormalMode();
+
 // void connectMQTT(void *pvParameters);
 
-void setup() {
+void setup()
+{
+    Utils::enableLogColors(false);
+    Utils::setLogLevel(LogLevel::DEBUG_ALL);
     meuPeripherals.initPeripherals();
-    meuModulo.initModule1();
-    meuDriver.initDriver1();
+
+    // Inicializa SPIFFS para o HTML
+    checkCredentials();
+    if (shouldStartPortal)
+    {
+        startConfigPortal();
+    }
+    else
+    {
+        initializeNormalMode();
+    }
+}
+
+void initializeNormalMode()
+{
+    LOG_INFO("Iniciando NVS...");
+    saveCredentialsToNVS();
+
     meuWiFi.initWiFi();
 
     led1.begin();
@@ -49,24 +70,26 @@ void setup() {
     meuFan.begin();
     tempSensor.begin();
 
-    meuMQTT.initMQTT(DEVICE_ID, "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
-    ArduinoOTA.setPort(OTA_PORT);
-    ArduinoOTA.setPassword(OTA_PASSWORD);
-    Serial.println("Iniciando OTA...");
-    ArduinoOTA.begin();
+    meuMQTT.initMQTT(meuMQTT.getDeviceId(), "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
+    setupOTA();
 }
 
+void loop()
+{
+    if (isPortalActive())
+    {
+        handlePortal();
+    }
+    else
+    {
+        ArduinoOTA.handle();
 
-void loop() {
-    // updateOTA();
-
-    ArduinoOTA.handle();
-
-    static unsigned long lastSend = millis();
-    if (millis() - lastSend >= 10000) {
-
-        tempSensor.update();
-        wifiPower.update();
-        lastSend = millis();
+        static unsigned long lastSend = millis();
+        if (millis() - lastSend >= 10000)
+        {
+            tempSensor.update();
+            wifiPower.update();
+            lastSend = millis();
+        }
     }
 }

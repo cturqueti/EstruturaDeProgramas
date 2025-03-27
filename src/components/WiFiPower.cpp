@@ -1,7 +1,8 @@
 #include "WifiPower.h"
 
 WifiPower::WifiPower(MQTTManager &mqtt)
-    : _mqtt(mqtt), _uniqueId("wifi_power")
+    : _mqtt(mqtt),
+      _uniqueId("wifi_power")
 {
     _stateTopic = generateTopic(_mqtt.getDeviceId(), "sensor", _uniqueId, "state");
 }

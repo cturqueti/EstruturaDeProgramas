@@ -8,6 +8,7 @@ void setupOTA()
     String password = preferences.getString("ota_password", "");
 
     preferences.end();
+    LOG_INFO("password: %s", password.c_str());
 
     if (password == "")
     {

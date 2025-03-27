@@ -115,14 +115,15 @@ void MQTTManager::reconnectMQTT()
         Preferences preferences;
         preferences.begin("mqtt-creds", true); // Modo leitura
 
-        String user = preferences.getString("user", "");
-        String password = preferences.getString("password", "");
+        String user = preferences.getString("mqtt_user", "");
+        String password = preferences.getString("mqtt_password", "");
 
         preferences.end();
 
         if (user == "" || password == "")
         {
-            LOG_ERROR("Credenciais não encontradas na NVS");
+            LOG_ERROR("Credenciais MQTT não encontradas na NVS");
+            // LOG_INFO("user: %s\tpassword: %s", user.c_str(), password.c_str());
             return;
         }
 

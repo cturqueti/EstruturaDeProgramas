@@ -86,6 +86,7 @@ bool WiFiManager::reconnectWIFI()
   if (ssid == "" || password == "")
   {
     LOG_ERROR("Credenciais não encontradas na NVS");
+    // LOG_INFO("ssid: %s\tpassword: %s", ssid.c_str(), password.c_str());
     return false;
   }
 

@@ -5,13 +5,13 @@ void setupOTA()
     Preferences preferences;
     preferences.begin("ota-creds", true);
 
-    String password = preferences.getString("password", "");
+    String password = preferences.getString("ota_password", "");
 
     preferences.end();
 
     if (password == "")
     {
-        LOG_ERROR("Credenciais não encontradas na NVS");
+        LOG_ERROR("Credenciais OTA não encontradas na NVS");
         return;
     }
 

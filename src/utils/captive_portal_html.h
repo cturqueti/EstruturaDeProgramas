@@ -1,3 +1,10 @@
+#ifndef CAPTIVE_PORTAL_HTML_H
+#define CAPTIVE_PORTAL_HTML_H
+
+#include <Arduino.h>
+
+// const char config_html[] PROGMEM = R"rawliteral(
+const char *config_html = R"=====(
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -129,8 +136,8 @@
             </div>
 
             <div class="form-group">
-                <label for="ota_pass">Senha OTA (Atualização):</label>
-                <input type="password" id="ota_pass" name="ota_pass" placeholder="Digite a senha para atualizações OTA">
+                <label for="ota_password">Senha OTA (Atualização):</label>
+                <input type="password" id="ota_password" name="ota_password" placeholder="Digite a senha para atualizações OTA">
             </div>
 
             <button type="submit" class="btn">Salvar Configurações</button>
@@ -168,3 +175,6 @@
     </script>
 </body>
 </html>
+)=====";
+
+#endif // CAPTIVE_PORTAL_HTML_H

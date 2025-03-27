@@ -61,7 +61,7 @@ void setup()
 void initializeNormalMode()
 {
     LOG_INFO("Iniciando NVS...");
-    saveCredentialsToNVS();
+    // saveCredentialsToNVS();
 
     meuWiFi.initWiFi();
 

@@ -1,59 +1,90 @@
 #include "captive_portal.h"
-#include "utils.h"
 #include "components/Led.h"
+#include "utils.h"
 #include "utils/captive_portal_html.h"
 
 WebServer server(80);
-DNSServer dnsServer;
 
-const char *apSSID = "ESP32-Config";
-const char *apPassword = "config1234";
-bool shouldStartPortal = false;
-unsigned long portalStartTime = 0;
-const unsigned long PORTAL_TIMEOUT = 5 * 60 * 1000; // 5 minutos
-
-void checkCredentials()
+CaptivePortal::CaptivePortal()
 {
-    Preferences preferences;
-    preferences.begin("wifi-creds", true);
-    String ssid = preferences.getString("ssid", "");
-    String password = preferences.getString("password", "");
-    LOG_INFO("ssid: %s\tpassword: %s", ssid.c_str(), password.c_str());
-    preferences.end();
-
-    preferences.begin("mqtt-creds", true);
-    String mqttUser = preferences.getString("mqtt_user", "");
-    String mqttPassword = preferences.getString("mqtt_password", "");
-    LOG_INFO("user: %s\tpassword: %s", mqttUser.c_str(), mqttPassword.c_str());
-    preferences.end();
-
-    preferences.begin("ota-creds", true);
-    String otaPassword = preferences.getString("ota_password", "");
-    LOG_INFO("password: %s", otaPassword.c_str());
-    preferences.end();
-
-    if (ssid.isEmpty() || password.isEmpty() || mqttUser.isEmpty() || mqttPassword.isEmpty())
-    {
-        shouldStartPortal = true;
-        LOG_WARN("Credenciais incompletas, iniciando portal");
-    }
+    //_shouldStartPortal = false;
+    _portalStartTime = 0;
 }
 
-void handleRoot()
+CaptivePortal::~CaptivePortal() {}
+
+bool CaptivePortal::startCaptivePortal()
+{
+    if (_shouldStartPortal)
+    {
+        LOG_WARN("Portal já está ativo");
+        return true;
+    }
+
+    _portalStartTime = millis();
+
+    if (wifiManager.beginAP())
+    {
+        _shouldStartPortal = true;
+        dnsServer.start(53, "*", WiFi.softAPIP());
+
+        server.on("/", HTTP_GET, [this]()
+                  { this->handleRoot(); });
+        server.on("/scan", HTTP_GET, [this]()
+                  { this->handleScan(); });
+        server.on("/save", HTTP_POST, [this]()
+                  { this->handleSave(); });
+        server.onNotFound([]()
+                          {
+            server.sendHeader("Location", "http://" + WiFi.softAPIP().toString(), true);
+            server.send(302, "text/plain", ""); });
+
+        server.begin();
+        LOG_DEBUG("Servidor DNS e HTTP iniciados");
+        if (!startTask())
+        {
+            LOG_ERROR("Falha ao iniciar task do portal");
+            stopCaptivePortal();
+            return false;
+        }
+        else
+        {
+            LOG_INFO("Portal cativo iniciado com sucesso");
+            return true;
+        }
+    }
+    else
+    {
+        LOG_ERROR("Falha ao iniciar AP WiFi");
+        return false;
+    }
+    return false;
+}
+
+void CaptivePortal::stopCaptivePortal()
+{
+    _shouldStartPortal = false;
+    server.stop();
+    dnsServer.stop();
+    WiFi.softAPdisconnect(true);
+    LOG_DEBUG("Portal parado");
+}
+
+void CaptivePortal::handleRoot()
 {
     LOG_DEBUG("Requisição recebida na raiz");
 
     String networks = scanNetworks();
-    String dynamicHTML = String(config_html);
-    dynamicHTML.replace("<!-- NETWORKS_PLACEHOLDER -->", networks);
+    String html = String(config_html);
+    html.replace("<!-- NETWORKS_PLACEHOLDER -->", networks);
 
     server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     server.sendHeader("Pragma", "no-cache");
     server.sendHeader("Expires", "-1");
-    server.send(200, "text/html", config_html);
+    server.send(200, "text/html", html); // Envie o HTML modificado
 }
 
-void handleSave()
+void CaptivePortal::handleSave()
 {
     if (!server.hasArg("ssid") || !server.hasArg("mqtt_user"))
     {
@@ -72,6 +103,15 @@ void handleSave()
 
     unsigned long startTime = millis();
     bool wifiConnected = false;
+
+    // String waitResponse = R"(
+    //     <html><body style='font-family: Arial; text-align: center;'>
+    //     <h1 style='color: orange;'>Tentando estabelecer a Conexão WiFi!</h1>
+    //     <p>Tentando estabelecer a conexão WiFi com as credenciais fornecidas.</p>
+    //     <p>Por favor aguarde.</p>
+    //     </body></html>
+    //     )";
+    // server.send(200, "text/html", waitResponse);
 
     // Tentar conectar por até 10 segundos
     while (millis() - startTime < 10000)
@@ -106,77 +146,76 @@ void handleSave()
     preferences.putString("ssid", ssid);
     preferences.putString("password", password);
     preferences.end();
+    LOG_INFO("Salvado as configurações WIFI");
 
     preferences.begin("mqtt-creds", false);
     preferences.putString("mqtt_user", mqttUser);
     preferences.putString("mqtt_password", mqttPassword);
     preferences.end();
+    LOG_INFO("Salvado as configurações MQTT");
 
     preferences.begin("ota-creds", false);
     preferences.putString("ota_password", otaPassword);
     preferences.end();
+    LOG_INFO("Salvado as configurações OTA");
 
     String response = R"(
     <html><body style='font-family: Arial; text-align: center;'>
     <h1 style='color: green;'>Configuração Salva!</h1>
-    <p>O dispositivo será reiniciado em 5 segundos...</p>
+    <p>O dispositivo será reiniciado em...</p>
     <script>
-        setTimeout(function(){ window.location.href = '/'; }, 5000);
+        setTimeout(function(){ window.location.href = '/'; }, 2000);
     </script>
     </body></html>
     )";
 
     server.send(200, "text/html", response);
-    delay(5000);
+    // delay(5000);
+    stopCaptivePortal();
     ESP.restart();
 }
 
-void startConfigPortal()
-{
-    portalStartTime = millis();
-    WiFi.softAP(apSSID, apPassword);
-    LOG_INFO("AP criado. SSID: %s, IP: %s", apSSID, WiFi.softAPIP().toString().c_str());
-
-    dnsServer.start(53, "*", WiFi.softAPIP());
-
-    server.on("/", HTTP_GET, handleRoot);
-    server.on("/scan", HTTP_GET, handleScan);
-    server.on("/save", HTTP_POST, handleSave);
-    server.onNotFound([]()
-                      {
-        server.sendHeader("Location", "http://" + WiFi.softAPIP().toString(), true);
-        server.send(302, "text/plain", ""); });
-
-    server.begin();
-    LOG_DEBUG("Servidor DNS e HTTP iniciados");
-}
-
-bool isPortalActive()
-{
-    return shouldStartPortal;
-    // return shouldStartPortal && (millis() - portalStartTime < PORTAL_TIMEOUT);
-}
-
-void handlePortal()
+void CaptivePortal::handlePortal()
 {
     if (isPortalActive())
     {
-        // LOG_INFO("Processando requisição do portal");
         dnsServer.processNextRequest();
         server.handleClient();
     }
-    else if (shouldStartPortal)
+    else if (!isCredentials())
     {
         LOG_ERROR("Timeout do portal captivo");
         ESP.restart();
     }
 }
 
-void handleScan()
+void CaptivePortal::handleScan()
 {
     LOG_DEBUG("Requisição de escaneamento recebida");
     String networks = scanNetworks();
     server.send(200, "text/html", networks);
+}
+
+String CaptivePortal::scanNetworks()
+{
+    LOG_INFO("Escaneando redes WiFi...");
+    int numNetworks = WiFi.scanNetworks();
+    LOG_INFO("Redes encontradas: %d", numNetworks);
+
+    // implementar futuramente um while enquanto não encontrar nenhuma fica varrendo, maximo 10 tentativas
+
+    String options = "";
+    for (int i = 0; i < numNetworks; ++i)
+    {
+        options += "<option value='" + WiFi.SSID(i) + "'>" + WiFi.SSID(i) + " (" + WiFi.RSSI(i) + "dBm)";
+        if (WiFi.encryptionType(i) != WIFI_AUTH_OPEN)
+        {
+            options += " 🔒";
+        }
+        options += "</option>";
+    }
+    WiFi.scanDelete(); // Limpa a lista de redes
+    return options;
 }
 
 String scanNetworks()
@@ -197,4 +236,30 @@ String scanNetworks()
     }
     WiFi.scanDelete(); // Limpa a lista de redes
     return options;
+}
+
+bool CaptivePortal::startTask()
+{
+    LOG_DEBUG("Iniciando tarefa de portal captivo...");
+    BaseType_t result = xTaskCreate(connectCaptivePortalStatic, "Captive Portal", 4096, this, 2, NULL);
+
+    if (result != pdPASS)
+    {
+        LOG_ERROR("Falha ao criar task do portal");
+        return false;
+    }
+
+    LOG_DEBUG("Tarefa do portal criada com sucesso");
+    return true;
+}
+
+void connectCaptivePortalStatic(void *pvParameters)
+{
+    CaptivePortal *instance = static_cast<CaptivePortal *>(pvParameters);
+    while (instance->isPortalActive())
+    {
+        instance->handlePortal();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
+    vTaskDelete(nullptr);
 }

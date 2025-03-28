@@ -33,11 +33,13 @@
 Peripherals meuPeripherals;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT(DEVICE_ID);
+CaptivePortal meuPortal;
 
 Led led1(meuMQTT, 4);
 WifiPower wifiPower(meuMQTT);
 Fan meuFan(meuMQTT, 2);
 TemperatureSensor tempSensor(meuMQTT, A0, true);
+Ota meuOta;
 
 // 4️⃣ Declaração de protótipos de funções
 void initializeNormalMode();
@@ -46,31 +48,30 @@ void initializeNormalMode();
 void setup()
 {
     Utils::enableLogColors(false);
-    Utils::setLogLevel(LogLevel::DEBUG_ALL);
+    Utils::setLogLevel(LogLevel::DEBUG_ALL); // DEBUG_ALL, INFO_AND_ABOVE, WARNING_AND_ABOVE, ERROR_ONLY
     meuPeripherals.initPeripherals();
 
-    // Inicializa SPIFFS para o HTML
-    checkCredentials();
-    if (shouldStartPortal)
+    // Verifica se tem credenciais salvas
+    // if (!isCredentials())
+    if (true)
     {
-        startConfigPortal();
+        meuPortal.startCaptivePortal(); // Inicia o portal
     }
     else
     {
-        initializeNormalMode();
+        initializeNormalMode(); // Inicia o modo normal
     }
 }
 
 // 6️⃣ Função loop()
 void loop()
 {
-    if (isPortalActive())
+    if (meuPortal.isPortalActive())
     {
-        handlePortal();
+        // meuPortal.handlePortal();
     }
     else
     {
-        ArduinoOTA.handle();
 
         static unsigned long lastSend = millis();
         if (millis() - lastSend >= 10000)
@@ -88,13 +89,13 @@ void initializeNormalMode()
     LOG_INFO("Iniciando NVS...");
     // saveCredentialsToNVS();
 
-    meuWiFi.initWiFi();
+    meuWiFi.beginClient(); // inicia wifi e task para verificar o estado
 
     led1.begin();
     wifiPower.begin();
     meuFan.begin();
     tempSensor.begin();
 
-    meuMQTT.initMQTT(meuMQTT.getDeviceId(), "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
-    setupOTA();
+    meuMQTT.initMQTT(meuMQTT.getDeviceId(), "Meu ESP32 Dinâmico"); // inicia MQTT e task para verificar mensagens
+    meuOta.begin();
 }

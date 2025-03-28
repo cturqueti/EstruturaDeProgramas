@@ -79,3 +79,31 @@ String Topic::generate(const String &device_id, const String &suffix)
 {
     return "homeassistant/" + device_id + "/" + suffix;
 }
+
+bool isCredentials()
+{
+    Preferences preferences;
+    preferences.begin("wifi-creds", true);
+    String ssid = preferences.getString("ssid", "");
+    String password = preferences.getString("password", "");
+    LOG_INFO("ssid: %s\tpassword: %s", ssid.c_str(), password.c_str());
+    preferences.end();
+
+    preferences.begin("mqtt-creds", true);
+    String mqttUser = preferences.getString("mqtt_user", "");
+    String mqttPassword = preferences.getString("mqtt_password", "");
+    LOG_INFO("user: %s\tpassword: %s", mqttUser.c_str(), mqttPassword.c_str());
+    preferences.end();
+
+    preferences.begin("ota-creds", true);
+    String otaPassword = preferences.getString("ota_password", "");
+    LOG_INFO("password: %s", otaPassword.c_str());
+    preferences.end();
+
+    if (ssid.isEmpty() || password.isEmpty() || mqttUser.isEmpty() || mqttPassword.isEmpty())
+    {
+        return false;
+        LOG_WARN("Credenciais incompletas, iniciando portal");
+    }
+    return true;
+}

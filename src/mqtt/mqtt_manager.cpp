@@ -5,6 +5,13 @@
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;
 
+MQTTManager *MQTTManager::instance = nullptr;
+
+/**
+ * @brief Cria um gerenciador MQTT
+ *
+ * @param deviceId ID do dispositivo que conecta ao servidor MQTT
+ */
 MQTTManager::MQTTManager(const String &deviceId) : _mqttClient(_espClient), _device_id(deviceId)
 {
     _mqttClient.setBufferSize(2048);
@@ -15,6 +22,12 @@ MQTTManager::~MQTTManager()
 {
 }
 
+/**
+ * @brief Inicializa o MQTT com o servidor e as informações de dispositivo
+ *
+ * @param device_id ID do dispositivo
+ * @param device_name Nome do dispositivo
+ */
 void MQTTManager::initMQTT(const String &device_id, const String &device_name)
 {
     while (WiFi.status() != WL_CONNECTED)
@@ -65,6 +78,12 @@ void MQTTManager::addComponent(const ComponentConfig &config)
     }
 }
 
+/**
+ * @brief Loop principal do MQTTManager
+ *
+ * Chama o loop() do PubSubClient e verifica se o dispositivo está online.
+ * Caso sim, publica a mensagem "online" no tópico /<device_id>/status a cada 30 segundos.
+ */
 void MQTTManager::loop()
 {
     _mqttClient.loop();
@@ -108,10 +127,26 @@ void MQTTManager::publishMessage(const char *topic, const char *payload)
     }
 }
 
-void MQTTManager::reconnectMQTT()
+/**
+ * @brief Reconnecta o cliente MQTT ao broker.
+ *
+ * Caso as credenciais MQTT estejam configuradas, tenta conectar ao broker
+ * MQTT com as credenciais armazenadas na NVS. Caso as credenciais estejam
+ * vazias, retorna falso.
+ *
+ * O método retorna verdadeiro se a conexão for bem sucedida e o cliente
+ * estiver conectado.
+ *
+ * @return Verdadeiro se a conexão for bem sucedida, falso caso contrário.
+ */
+bool MQTTManager::reconnectMQTT()
 {
-    while (!_mqttClient.connected() && WiFi.status() == WL_CONNECTED)
+    const uint8_t max_attempts = 10;
+    uint8_t attempts = 0;
+
+    while (!_mqttClient.connected() && WiFi.status() == WL_CONNECTED && attempts < max_attempts)
     {
+        attempts++;
         Preferences preferences;
         preferences.begin("mqtt-creds", true); // Modo leitura
 
@@ -124,7 +159,7 @@ void MQTTManager::reconnectMQTT()
         {
             LOG_ERROR("Credenciais MQTT não encontradas na NVS");
             // LOG_INFO("user: %s\tpassword: %s", user.c_str(), password.c_str());
-            return;
+            return false;
         }
 
         LOG_DEBUG("Conectando ao broker MQTT...");
@@ -149,14 +184,17 @@ void MQTTManager::reconnectMQTT()
             subscribeAllCommandTopics();
 
             _mqttTaskActive = false;
+            return true;
         }
         else
         {
             LOG_ERROR("Falha na conexão, rc=%d", _mqttClient.state());
             LOG_INFO(" Tentando novamente em 5 segundos...");
             vTaskDelay(5000 / portTICK_PERIOD_MS);
+            return false;
         }
     }
+    return _mqttClient.connected();
 }
 
 void MQTTManager::publishAllDiscoveries()
@@ -186,28 +224,13 @@ void MQTTManager::subscribeAllCommandTopics()
 }
 
 // -------------------- Private Methods --------------------
-void connectMQTTStatic(void *pvParameters)
-{
-    // Converte o parâmetro de volta para o tipo MQTTManager*
-    MQTTManager *instance = static_cast<MQTTManager *>(pvParameters);
-    // Chama a função membro
-    instance->reconnectMQTT();
-    while (true)
-    {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-        if (!instance->isConnected())
-        {
-            instance->reconnectMQTT();
-            LOG_WARN("Reconectado ao broker MQTT!");
-        }
-        else
-        {
-            instance->loop();
-        }
-    }
-    vTaskDelete(nullptr);
-}
 
+/**
+ * Esta função verifica se a conexão MQTT está ativa e, se necessário, cria
+ * uma tarefa para reconectar ao broker MQTT. Se a tarefa estiver ativa,
+ * não faz nada. Além disso, a tarefa de reconexão é criada apenas uma vez,
+ * para evitar a criação de múltiplas tarefas.
+ */
 void MQTTManager::handleMQTT()
 {
     if (!_mqttClient.connected())
@@ -222,9 +245,27 @@ void MQTTManager::handleMQTT()
             _mqttTaskActive = true; // Marca a tarefa como ativa
         }
     }
-    _mqttClient.loop(); // Mantém a conexão ativa
+    //_mqttClient.loop(); // Mantém a conexão ativa
 }
 
+/**
+ * @brief Função callback chamada quando uma mensagem MQTT é recebida.
+ *
+ * Esta função é chamada automaticamente quando uma mensagem MQTT é recebida.
+ * Ela verifica se o tópico da mensagem corresponde a um componente no vetor
+ * `_components`. Se sim, ela chama a respectiva função de callback do
+ * componente, passando como parâmetro o estado ou valor recebido na mensagem.
+ *
+ * @param topic Tópico da mensagem recebida.
+ * @param payload Payload da mensagem recebida.
+ * @param length Tamanho do payload.
+ *
+ * @note Esta função é chamada em um contexto de callback, portanto, não deve
+ *       bloquear ou realizar operações demoradas. Além disso, a função
+ *       `mqttCallback` é chamada em um contexto de thread separado, por isso
+ *       é importante sincronizar as operações com o contexto principal, se
+ *       necessário.
+ */
 void MQTTManager::mqttCallback(char *topic, byte *payload, unsigned int length)
 {
     LOG_DEBUG("------------- MQTT CALLBACK ---------------");
@@ -421,4 +462,28 @@ void MQTTManager::handleFanSpeedMessage(const ComponentConfig &config, const Str
     {
         config.speed_callback(speed, config.context);
     }
+}
+
+void connectMQTTStatic(void *pvParameters)
+{
+    // Converte o parâmetro de volta para o tipo MQTTManager*
+    MQTTManager *instance = static_cast<MQTTManager *>(pvParameters);
+    // Chama a função membro
+    if (instance->reconnectMQTT())
+    {
+        while (instance->isMqttActive())
+        {
+            vTaskDelay(100 / portTICK_PERIOD_MS);
+            if (!instance->isConnected())
+            {
+                instance->reconnectMQTT();
+                LOG_WARN("Reconectado ao broker MQTT!");
+            }
+            else
+            {
+                instance->loop();
+            }
+        }
+    }
+    vTaskDelete(nullptr);
 }

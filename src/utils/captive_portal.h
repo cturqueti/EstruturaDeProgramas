@@ -1,26 +1,42 @@
 #ifndef CAPTIVE_PORTAL_H
 #define CAPTIVE_PORTAL_H
 
-#include <WiFi.h>
-#include <WebServer.h>
+#include "wifi/wifi_manager.h"
 #include <DNSServer.h>
 #include <Preferences.h>
+#include <WebServer.h>
+#include <WiFi.h>
 
 extern WebServer server;
-extern DNSServer dnsServer;
 
-extern const char *apSSID;
-extern const char *apPassword;
-extern bool shouldStartPortal;
+class CaptivePortal
+{
+public:
+    CaptivePortal();
+    ~CaptivePortal();
 
-void checkCredentials();
-void startConfigPortal();
-void initializeNormalMode();
-bool isPortalActive();
-void handlePortal();
-void handleRoot();
-void handleSave();
-void handleScan();
-String scanNetworks();
+    bool startCaptivePortal();
+    void stopCaptivePortal();
+
+    void handleRoot();
+    void handleSave();
+
+    void handlePortal();
+    void handleScan();
+
+    inline bool isPortalActive() { return _shouldStartPortal && (millis() - _portalStartTime < PORTAL_TIMEOUT); };
+
+private:
+    WiFiManager wifiManager;
+    DNSServer dnsServer;
+    unsigned long _portalStartTime = 0;
+    bool _shouldStartPortal = false;
+    const unsigned long PORTAL_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+    String scanNetworks();
+
+    bool startTask();
+};
+
+void connectCaptivePortalStatic(void *pvParameters);
 
 #endif // CAPTIVE_PORTAL_H

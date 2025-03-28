@@ -78,4 +78,6 @@ public:
     static String generate(const String &device_id, const String &suffix);
 };
 
+bool isCredentials();
+
 #endif // UTILS_H

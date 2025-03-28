@@ -11,9 +11,12 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
+#include "config.h"
 #include "logging_macros.h"
+#include "pinout.h"
 #include "utils/utils.h"
 #include "wifi_config.h"
+#include <Arduino.h>
 #include <IPAddress.h>
 #include <WiFi.h>
 
@@ -29,15 +32,20 @@ public:
     WiFiManager();
     ~WiFiManager();
 
-    void initWiFi();
-    void handleWiFi();
+    bool beginClient();
+    bool beginAP();
+    bool connectWIFI();
 
     inline bool isConnected() { return WiFi.isConnected(); }
 
-    bool reconnectWIFI();
+protected:
+    bool _wifiTaskActive = false;
+    bool _wifiStarted = false;
+    String _ssid, _password;
+    String _apSSID = "ESP32_portal", _apPassword = "portal1234";
 
 private:
-    bool _wifiTaskActive = false;
+    bool getPreferences();
 };
 
 #endif // WIFI_MANAGER_H

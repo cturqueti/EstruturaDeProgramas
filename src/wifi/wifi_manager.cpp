@@ -9,9 +9,6 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 #include "wifi_manager.h"
-#include "config.h"
-#include "pinout.h"
-#include <Arduino.h>
 
 WiFiManager::WiFiManager()
 {
@@ -32,69 +29,50 @@ WiFiManager::~WiFiManager()
   // Destrutor
 }
 
-void WiFiManager::initWiFi()
+bool WiFiManager::beginClient()
 {
-  // Inicialização do Wi-Fi
-  handleWiFi();
-}
+  WiFi.mode(WIFI_STA); // Configura como station
+  WiFi.setAutoReconnect(true);
 
-void connectWiFiStatic(void *parameter)
-{
-  WiFiManager *instance = static_cast<WiFiManager *>(parameter);
-  instance->reconnectWIFI();
-  while (true)
+  connectWIFI();
+
+  if (WiFi.isConnected())
   {
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    if (!instance->isConnected())
-    {
-      instance->reconnectWIFI();
-      LOG_DEBUG("Reconectado ao Wi-Fi!");
-    }
+    _wifiStarted = true;
+
+    return true;
   }
-  vTaskDelete(nullptr);
-}
-
-void WiFiManager::handleWiFi()
-{
-  // Manutenção do Wi-Fi
-#ifndef ESP32
-  MDNS.update();
-#endif
-
-  if (!WiFi.isConnected())
+  else
   {
-    LOG_DEBUG("Conectando ao Wi-Fi...");
-    if (!_wifiTaskActive)
-    {
-      BaseType_t result = xTaskCreate(connectWiFiStatic, "WiFi Connect", 8192, this, 2, NULL);
-      LOG_DEBUG("Tarefa de WiFi criada...");
-      _wifiTaskActive = true;
-    }
+    return false;
   }
 }
 
-bool WiFiManager::reconnectWIFI()
+bool WiFiManager::beginAP()
 {
-  Preferences preferences;
-  preferences.begin("wifi-creds", true);
+  WiFi.setAutoReconnect(false);
+  WiFi.mode(WIFI_AP); // Configura como AP
+  WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
+  WiFi.softAP(_apSSID, _apPassword);
+  LOG_INFO("AP criado. SSID: %s, IP: %s", _apSSID, WiFi.softAPIP().toString().c_str());
+  return true;
+}
 
-  String ssid = preferences.getString("ssid", "");
-  String password = preferences.getString("password", "");
+bool WiFiManager::connectWIFI()
+{
+  const uint8_t max_attempts = 5;
+  int attempts = 0;
 
-  preferences.end();
-
-  if (ssid == "" || password == "")
+  if (getPreferences())
   {
-    LOG_ERROR("Credenciais não encontradas na NVS");
-    // LOG_INFO("ssid: %s\tpassword: %s", ssid.c_str(), password.c_str());
+    WiFi.begin(_ssid.c_str(), _password.c_str());
+  }
+  else
+  {
     return false;
   }
 
-  WiFi.begin(ssid.c_str(), password.c_str());
-
-  int retries = 0;
-
-  while (WiFi.status() != WL_CONNECTED && retries < 10)
+  while (WiFi.status() != WL_CONNECTED && attempts < max_attempts)
   {
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     LOG_DEBUG("Conectando ao Wi-Fi...");
@@ -143,4 +121,23 @@ bool WiFiManager::reconnectWIFI()
   {
     return false;
   }
+}
+
+bool WiFiManager::getPreferences()
+{
+  Preferences preferences;
+  preferences.begin("wifi-creds", true);
+
+  _ssid = preferences.getString("ssid", "");
+  _password = preferences.getString("password", "");
+
+  preferences.end();
+
+  if (_ssid == "" || _password == "")
+  {
+    LOG_ERROR("Credenciais não encontradas na NVS");
+    // LOG_INFO("ssid: %s\tpassword: %s", ssid.c_str(), password.c_str());
+    return false;
+  }
+  return true;
 }

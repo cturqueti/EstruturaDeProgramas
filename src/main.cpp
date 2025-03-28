@@ -28,6 +28,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
+#include <LittleFS.h>
 
 // 3️⃣ Declaração de objetos globais
 Peripherals meuPeripherals;
@@ -47,13 +48,14 @@ void initializeNormalMode();
 // 5️⃣ Função setup()
 void setup()
 {
+    LittleFS.begin();
     Utils::enableLogColors(false);
     Utils::setLogLevel(LogLevel::DEBUG_ALL); // DEBUG_ALL, INFO_AND_ABOVE, WARNING_AND_ABOVE, ERROR_ONLY
     meuPeripherals.initPeripherals();
 
     // Verifica se tem credenciais salvas
-    // if (!isCredentials())
-    if (true)
+    if (!isCredentials())
+    // if (true)
     {
         meuPortal.startCaptivePortal(); // Inicia o portal
     }

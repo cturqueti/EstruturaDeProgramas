@@ -2,7 +2,9 @@
 #define CAPTIVE_PORTAL_H
 
 #include "wifi/wifi_manager.h"
+#include <ArduinoJson.h>
 #include <DNSServer.h>
+#include <LittleFS.h>
 #include <Preferences.h>
 #include <WebServer.h>
 #include <WiFi.h>
@@ -23,6 +25,9 @@ public:
 
     void handlePortal();
     void handleScan();
+
+    String scanNetworksToJSON();
+    void handleGetNetworks();
 
     inline bool isPortalActive() { return _shouldStartPortal && (millis() - _portalStartTime < PORTAL_TIMEOUT); };
 

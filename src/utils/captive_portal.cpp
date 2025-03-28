@@ -34,6 +34,9 @@ bool CaptivePortal::startCaptivePortal()
                   { this->handleScan(); });
         server.on("/save", HTTP_POST, [this]()
                   { this->handleSave(); });
+        server.on("/getNetworks", HTTP_GET, [this]()
+                  { this->handleGetNetworks(); });
+
         server.onNotFound([]()
                           {
             server.sendHeader("Location", "http://" + WiFi.softAPIP().toString(), true);
@@ -72,10 +75,24 @@ void CaptivePortal::stopCaptivePortal()
 
 void CaptivePortal::handleRoot()
 {
+    String html;
     LOG_DEBUG("Requisição recebida na raiz");
 
     String networks = scanNetworks();
-    String html = String(config_html);
+
+    File file = LittleFS.open("/config.html", "r");
+    if (file)
+    {
+        html = file.readString(); // Lê todo o conteúdo
+        file.close();             // Fecha o arquivo!
+    }
+    else
+    {
+        // Fallback: HTML embutido na flash (use PROGMEM se possível)
+        html = String(config_html);
+        LOG_DEBUG("Falha ao abrir /config.html, usando HTML embutido");
+    }
+
     html.replace("<!-- NETWORKS_PLACEHOLDER -->", networks);
 
     server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -194,6 +211,31 @@ void CaptivePortal::handleScan()
     LOG_DEBUG("Requisição de escaneamento recebida");
     String networks = scanNetworks();
     server.send(200, "text/html", networks);
+}
+
+String CaptivePortal::scanNetworksToJSON()
+{
+    JsonDocument doc;
+    JsonArray networks = doc.to<JsonArray>();
+
+    int n = WiFi.scanNetworks();
+    for (int i = 0; i < n; i++)
+    {
+        JsonObject network = networks.add<JsonObject>();
+        network["ssid"] = WiFi.SSID(i);
+        network["rssi"] = WiFi.RSSI(i);
+        network["encrypted"] = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+    }
+    LOG_INFO("Escaneando rede");
+
+    String json;
+    serializeJson(doc, json);
+    return json;
+}
+void CaptivePortal::handleGetNetworks()
+{
+    String json = scanNetworksToJSON();
+    server.send(200, "application/json", json);
 }
 
 String CaptivePortal::scanNetworks()

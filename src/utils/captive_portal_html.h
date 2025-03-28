@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // const char config_html[] PROGMEM = R"rawliteral(
-const char *config_html = R"=====(
+const char config_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -175,6 +175,6 @@ const char *config_html = R"=====(
     </script>
 </body>
 </html>
-)=====";
+)rawliteral";
 
 #endif // CAPTIVE_PORTAL_HTML_H

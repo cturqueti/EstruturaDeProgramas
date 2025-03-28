@@ -129,8 +129,8 @@
             </div>
 
             <div class="form-group">
-                <label for="ota_pass">Senha OTA (Atualização):</label>
-                <input type="password" id="ota_pass" name="ota_pass" placeholder="Digite a senha para atualizações OTA">
+                <label for="ota_password">Senha OTA (Atualização):</label>
+                <input type="password" id="ota_password" name="ota_password" placeholder="Digite a senha para atualizações OTA">
             </div>
 
             <button type="submit" class="btn">Salvar Configurações</button>
@@ -138,25 +138,40 @@
     </div>
 
     <script>
-        function refreshNetworks() {
-            console.log("Atualizando redes...");
-            fetch('/scan')
-              .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na rede');
-                }
-                return response.text();
-                })
-            .then(html => {
-                console.log("Redes recebidas:", html);
-                document.getElementById('ssid').innerHTML = 
-                    '<option value="">Selecione uma rede WiFi</option>' + html;
-            })
-            .catch(error => {
-                console.error('Erro ao atualizar redes:', error);
-                alert('Erro ao atualizar a lista de redes. Tente novamente.');
+                document.addEventListener("DOMContentLoaded", loadNetworks);
+
+// Função para carregar redes via AJAX
+function loadNetworks() {
+    const select = document.getElementById("ssid");
+    select.innerHTML = '<option value="">Carregando redes...</option>';
+
+    fetch('/getNetworks')
+        .then(response => {
+            if (!response.ok) throw new Error("Falha na rede");
+            return response.json();
+        })
+        .then(data => {
+            select.innerHTML = '<option value="">Selecione uma rede WiFi</option>';
+            data.forEach(network => {
+                const option = document.createElement("option");
+                option.value = network.ssid;
+                let text = `${network.ssid} (${network.rssi} dBm)`;
+                if (network.encrypted) text += " 🔒"; // Adicione isso no JSON do ESP32
+                option.text = text;
+                select.appendChild(option);
             });
-        }
+        })
+        .catch(error => {
+            console.error("Erro:", error);
+            select.innerHTML = '<option value="">Erro ao carregar redes</option>';
+        });
+}
+function refreshNetworks() {
+    const select = document.getElementById("ssid");
+    select.disabled = true;
+    loadNetworks(); // Reutiliza a mesma função de carregamento
+    setTimeout(() => { select.disabled = false; }, 1000);
+}
 
         // Foca no campo de senha quando uma rede protegida é selecionada
         document.getElementById('ssid').addEventListener('change', function() {

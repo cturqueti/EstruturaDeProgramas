@@ -6,10 +6,10 @@ Fan::Fan(MQTTManager &mqtt, uint8_t pin)
 {
     _uniqueId = "fan_" + _mqtt.getDeviceId() + "_" + String(pin);
     pinMode(_pin, OUTPUT);
-    _stateTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "on/state");
-    _commandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "on/set");
-    _speedStateTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage_state");
-    _speedCommandTopic = generateTopic(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage");
+    _stateTopic = _topic.generate(_mqtt.getDeviceId(), "fan", _uniqueId, "on/state");
+    _commandTopic = _topic.generate(_mqtt.getDeviceId(), "fan", _uniqueId, "on/set");
+    _speedStateTopic = _topic.generate(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage_state");
+    _speedCommandTopic = _topic.generate(_mqtt.getDeviceId(), "fan", _uniqueId, "speed/percentage");
 }
 
 void Fan::begin()

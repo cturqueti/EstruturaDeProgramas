@@ -4,8 +4,8 @@ Led::Led(MQTTManager &mqtt, uint8_t pin)
     : _mqtt(mqtt), _pin(pin), _uniqueId("led_Gpio" + String(pin))
 {
     pinMode(_pin, OUTPUT);
-    _stateTopic = generateTopic(_mqtt.getDeviceId(), "switch", _uniqueId, "state"); // Armazena o tópico
-    _commandTopic = generateTopic(_mqtt.getDeviceId(), "switch", _uniqueId, "command");
+    _stateTopic = _topic.generate(_mqtt.getDeviceId(), "switch", _uniqueId, "state"); // Armazena o tópico
+    _commandTopic = _topic.generate(_mqtt.getDeviceId(), "switch", _uniqueId, "command");
 }
 
 void Led::begin()

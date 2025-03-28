@@ -6,7 +6,7 @@ TemperatureSensor::TemperatureSensor(MQTTManager &mqtt, uint8_t analogPin, bool 
       _uniqueId("temp_1"),
       _testMode(testMode)
 {
-    _stateTopic = generateTopic(_mqtt.getDeviceId(), "sensor", _uniqueId, "state");
+    _stateTopic = _topic.generate(_mqtt.getDeviceId(), "sensor", _uniqueId, "state");
     if (!_testMode)
     {
         pinMode(_analogPin, INPUT);

@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "utils.h"
 
 LogLevel Utils::currentLogLevel = LogLevel::DEBUG_ALL;
@@ -70,63 +69,13 @@ void Utils::log(LogLevel level, const String &tag, const char *format, ...)
                   resetCode.c_str());
 }
 
-String generateTopic(const String &device_id, const String &component_type,
-                     const String &unique_id, const String &suffix)
+String Topic::generate(const String &device_id, const String &component_type,
+                       const String &unique_id, const String &suffix)
 {
     return "homeassistant/" + component_type + "/" + device_id + "/" + unique_id + "/" + suffix;
 }
 
-String generateTopic(const String &device_id, const String &suffix)
+String Topic::generate(const String &device_id, const String &suffix)
 {
     return "homeassistant/" + device_id + "/" + suffix;
 }
-
-// void saveCredentialsToNVS()
-// {
-//     if (strlen(WIFI_SSID) > 0 && strlen(WIFI_PASSWORD) > 0)
-//     {
-//         Preferences preferences;
-//         preferences.begin("wifi-creds", false);
-
-//         preferences.putString("ssid", WIFI_SSID);
-//         preferences.putString("password", WIFI_PASSWORD);
-
-//         preferences.end();
-//         LOG_INFO("Credenciais WIFI gravadas na NVS com sucesso!");
-//     }
-//     else
-//     {
-//         LOG_INFO("Erro: Credenciais WIFI não definidas no secrets.env");
-//     }
-
-//     if (strlen(MQTT_USER) > 0 && strlen(MQTT_PASSWORD) > 0)
-//     {
-//         Preferences preferences;
-//         preferences.begin("mqtt-creds", false);
-
-//         preferences.putString("user", MQTT_USER);
-//         preferences.putString("password", MQTT_PASSWORD);
-
-//         preferences.end();
-//         LOG_INFO("Credenciais MQTT gravadas na NVS com sucesso!");
-//     }
-//     else
-//     {
-//         LOG_INFO("Erro: Credenciais MQTT não definidas no secrets.env");
-//     }
-
-//     if (strlen(OTA_PASSWORD) > 0)
-//     {
-//         Preferences preferences;
-//         preferences.begin("ota-creds", false);
-
-//         preferences.putString("password", OTA_PASSWORD);
-
-//         preferences.end();
-//         LOG_INFO("Credenciais OTA gravadas na NVS com sucesso!");
-//     }
-//     else
-//     {
-//         LOG_INFO("Erro: Credenciais OTA não definidas no secrets.env");
-//     }
-// }

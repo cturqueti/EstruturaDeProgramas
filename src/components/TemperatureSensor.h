@@ -15,6 +15,8 @@ public:
 
 private:
     MQTTManager &_mqtt;
+    Topic _topic;
+
     uint8_t _analogPin;
     String _uniqueId;
     String _stateTopic;

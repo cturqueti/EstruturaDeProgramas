@@ -1,11 +1,11 @@
 #ifndef MQTT_MANAGER_H
 #define MQTT_MANAGER_H
 
-#include "ArduinoJson.h"
 #include "config.h"
 #include "config_types.h"
 #include "logging_macros.h"
 #include "utils/utils.h"
+#include <ArduinoJson.h>
 #include <PubSubClient.h> // Biblioteca MQTT
 #include <WiFi.h>         // Biblioteca Wi-Fi para ESP32
 #include <functional>
@@ -42,6 +42,7 @@ public:
 private:
     WiFiClient _espClient;
     PubSubClient _mqttClient;
+    Topic _topic;
     String _device_id;
     String _device_name;
     String _availabilityTopic;

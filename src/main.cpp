@@ -1,3 +1,5 @@
+// 1️⃣ Definições de pré-processador
+#define VERSAO "1.0"
 // ---------------------------------------------------------------------------------------------------------------- //
 //
 // Descrição: Este é o arquivo principal do projeto, onde o programa começa.
@@ -8,7 +10,7 @@
 //
 // ---------------------------------------------------------------------------------------------------------------- //
 
-#include "FS.h"
+// 2️⃣ Inclusão de bibliotecas
 #include "components/Fan.h"
 #include "components/Led.h"
 #include "components/TemperatureSensor.h"
@@ -27,6 +29,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 
+// 3️⃣ Declaração de objetos globais
 Peripherals meuPeripherals;
 WiFiManager meuWiFi;
 MQTTManager meuMQTT(DEVICE_ID);
@@ -36,10 +39,10 @@ WifiPower wifiPower(meuMQTT);
 Fan meuFan(meuMQTT, 2);
 TemperatureSensor tempSensor(meuMQTT, A0, true);
 
+// 4️⃣ Declaração de protótipos de funções
 void initializeNormalMode();
 
-// void connectMQTT(void *pvParameters);
-
+// 5️⃣ Função setup()
 void setup()
 {
     Utils::enableLogColors(false);
@@ -58,22 +61,7 @@ void setup()
     }
 }
 
-void initializeNormalMode()
-{
-    LOG_INFO("Iniciando NVS...");
-    // saveCredentialsToNVS();
-
-    meuWiFi.initWiFi();
-
-    led1.begin();
-    wifiPower.begin();
-    meuFan.begin();
-    tempSensor.begin();
-
-    meuMQTT.initMQTT(meuMQTT.getDeviceId(), "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
-    setupOTA();
-}
-
+// 6️⃣ Função loop()
 void loop()
 {
     if (isPortalActive())
@@ -92,4 +80,21 @@ void loop()
             lastSend = millis();
         }
     }
+}
+
+// 7️⃣ Implementação das funções
+void initializeNormalMode()
+{
+    LOG_INFO("Iniciando NVS...");
+    // saveCredentialsToNVS();
+
+    meuWiFi.initWiFi();
+
+    led1.begin();
+    wifiPower.begin();
+    meuFan.begin();
+    tempSensor.begin();
+
+    meuMQTT.initMQTT(meuMQTT.getDeviceId(), "Meu ESP32 Dinâmico"); // o nome só pode ter Maiusculas, minusculas e números
+    setupOTA();
 }

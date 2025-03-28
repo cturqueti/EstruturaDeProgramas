@@ -11,6 +11,7 @@
 //  Se a função for grande ou complexa, é melhor movê-la para um arquivo .cpp.
 // ---------------------------------------------------------------------------------------------------------------- //
 
+// 1 - Proteção contra múltiplas inclusões
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -34,10 +35,13 @@
 #define OTA_PASSWORD ""
 #endif
 
-#include <config.h>
-#include <Preferences.h>
+// 2 - Inclusão de bibliotecas necessárias
+#include "config.h"
 #include "logging_macros.h"
+#include <Arduino.h>
+#include <Preferences.h>
 
+// 3 - Declaração de enumeradores
 enum class LogLevel : uint8_t
 {
     DEBUG_ALL = 0,
@@ -47,8 +51,10 @@ enum class LogLevel : uint8_t
     NONE
 };
 
+// 4 - Declaração de classes e funções
 class Utils
 {
+
 public:
     static void customDelay(unsigned long ms);
     static void setLogLevel(LogLevel level);
@@ -63,11 +69,13 @@ private:
     static const String getColorCode(LogLevel level);
 };
 
-String generateTopic(const String &device_id, const String &component_type,
-                     const String &unique_id, const String &suffix);
+class Topic
+{
+public:
+    static String generate(const String &device_id, const String &component_type,
+                           const String &unique_id, const String &suffix);
 
-String generateTopic(const String &device_id, const String &suffix);
-
-void saveCredentialsToNVS();
+    static String generate(const String &device_id, const String &suffix);
+};
 
 #endif // UTILS_H

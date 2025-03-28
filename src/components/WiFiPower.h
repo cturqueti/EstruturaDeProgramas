@@ -15,6 +15,8 @@ public:
 
 private:
     MQTTManager &_mqtt;
+    Topic _topic;
+
     String _uniqueId;
     String _stateTopic;
 };

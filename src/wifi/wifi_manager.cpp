@@ -9,9 +9,9 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 #include "wifi_manager.h"
-#include "Arduino.h"
 #include "config.h"
 #include "pinout.h"
+#include <Arduino.h>
 
 WiFiManager::WiFiManager()
 {

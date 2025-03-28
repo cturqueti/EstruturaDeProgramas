@@ -8,7 +8,7 @@ MQTTManager *mqttManager = nullptr;
 MQTTManager::MQTTManager(const String &deviceId) : _mqttClient(_espClient), _device_id(deviceId)
 {
     _mqttClient.setBufferSize(2048);
-    _availabilityTopic = generateTopic(_device_id, "status");
+    _availabilityTopic = _topic.generate(_device_id, "status");
 }
 
 MQTTManager::~MQTTManager()
@@ -71,7 +71,7 @@ void MQTTManager::loop()
     static unsigned long lastUpdate = 0;
     if (millis() - lastUpdate > 30000)
     { // A cada 30 segundos
-        _mqttClient.publish(generateTopic(_device_id, "status").c_str(), "online", true);
+        _mqttClient.publish(_topic.generate(_device_id, "status").c_str(), "online", true);
         lastUpdate = millis();
     }
 }
@@ -359,11 +359,11 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     String payload;
     serializeJson(doc, payload);
 
-    LOG_DEBUG("Tentando publicar no tópico: %s", generateTopic(_device_id, component_type, config.unique_id, "config").c_str());
+    LOG_DEBUG("Tentando publicar no tópico: %s", _topic.generate(_device_id, component_type, config.unique_id, "config").c_str());
     LOG_DEBUG("%s", doc.as<String>().c_str());
     LOG_DEBUG(" Tamanho do payload: %d bytes", payload.length());
 
-    bool published = _mqttClient.publish(generateTopic(_device_id, component_type, config.unique_id, "config").c_str(), payload.c_str(), true);
+    bool published = _mqttClient.publish(_topic.generate(_device_id, component_type, config.unique_id, "config").c_str(), payload.c_str(), true);
 
     if (!published)
     {
@@ -372,7 +372,7 @@ void MQTTManager::publishDiscovery(const ComponentConfig &config)
     }
     else
     {
-        _mqttClient.publish(generateTopic(_device_id, "status").c_str(), "online", true);
+        _mqttClient.publish(_topic.generate(_device_id, "status").c_str(), "online", true);
     }
 }
 

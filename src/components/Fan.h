@@ -2,8 +2,8 @@
 #define FAN_H
 
 #pragma once
-#include "mqtt_manager.h"
-#include "utils.h"
+#include "mqtt/mqtt_manager.h"
+#include "utils/utils.h"
 
 class Fan
 {

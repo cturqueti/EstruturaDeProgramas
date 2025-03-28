@@ -1,9 +1,9 @@
 #include "button.h"
 #include "Arduino.h"
 #include "config.h"
+#include "mqtt/mqtt_manager.h"
 #include "pinout.h"
-#include "utils.h"
-#include "mqtt_manager.h"
+#include "utils/utils.h"
 
 Button::Button() : button_state(RELEASED_BUTTON),
                    edge(FALLING_BUTTON),

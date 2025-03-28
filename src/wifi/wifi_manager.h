@@ -11,12 +11,11 @@
 #ifndef WIFI_MANAGER_H
 #define WIFI_MANAGER_H
 
-#include <WiFi.h>
-#include "wifi_config.h"
-#include "secrets.h"
-#include <IPAddress.h>
-#include "utils.h"
 #include "logging_macros.h"
+#include "utils/utils.h"
+#include "wifi_config.h"
+#include <IPAddress.h>
+#include <WiFi.h>
 
 #ifdef ESP32
 #include <ESPmDNS.h>

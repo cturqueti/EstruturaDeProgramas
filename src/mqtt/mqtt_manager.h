@@ -1,17 +1,16 @@
 #ifndef MQTT_MANAGER_H
 #define MQTT_MANAGER_H
 
+#include "ArduinoJson.h"
+#include "config.h"
+#include "config_types.h"
+#include "logging_macros.h"
+#include "utils/utils.h"
 #include <PubSubClient.h> // Biblioteca MQTT
 #include <WiFi.h>         // Biblioteca Wi-Fi para ESP32
-#include "secrets.h"
-#include "ArduinoJson.h"
-#include <vector>
-#include <queue>
 #include <functional>
-#include "config_types.h"
-#include "config.h"
-#include "utils.h"
-#include "logging_macros.h"
+#include <queue>
+#include <vector>
 
 // #define MQTT_MAX_PACKET_SIZE 2048
 

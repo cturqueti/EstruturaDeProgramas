@@ -1,6 +1,6 @@
 #include "mqtt_manager.h"
 #include "pinout.h"
-#include "utils.h"
+#include "utils/utils.h"
 
 // Defina as variáveis globais
 MQTTManager *mqttManager = nullptr;

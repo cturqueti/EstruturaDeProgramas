@@ -2,16 +2,17 @@
 #define LED_h
 
 #pragma once
-#include "mqtt_manager.h"
-#include "utils.h"
+#include "mqtt/mqtt_manager.h"
+#include "utils/utils.h"
 
-class Led {
+class Led
+{
 public:
-    Led(MQTTManager& mqtt, uint8_t pin);
+    Led(MQTTManager &mqtt, uint8_t pin);
     void begin();
 
 private:
-    MQTTManager& _mqtt;
+    MQTTManager &_mqtt;
     uint8_t _pin;
     String _uniqueId;
     String _stateTopic, _commandTopic;
@@ -20,7 +21,7 @@ private:
     void handleStateChange(bool state);
 
     // Método estático wrapper
-    static void staticHandleCallback(bool state, void* context);
+    static void staticHandleCallback(bool state, void *context);
 };
 
 #endif // LED_h

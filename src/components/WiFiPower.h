@@ -2,9 +2,9 @@
 #define WIFI_POWER_H
 
 #pragma once
+#include "mqtt/mqtt_manager.h"
+#include "utils/utils.h"
 #include <WiFi.h>
-#include "mqtt_manager.h"
-#include "utils.h"
 
 class WifiPower
 {

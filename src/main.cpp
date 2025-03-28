@@ -8,24 +8,24 @@
 //
 // ---------------------------------------------------------------------------------------------------------------- //
 
-#include "Arduino.h"
-#include "config.h"
-#include "pinout.h"
-#include "wifi_manager.h"
-#include "mqtt_manager.h"
-#include "peripherals.h"
-#include <ArduinoOTA.h>
-#include "ota.h"
-#include "esp_log.h"
-#include <ArduinoJson.h>
-#include "utils.h"
-#include "logging_macros.h"
-#include "components/Led.h"
-#include "components/WifiPower.h"
-#include "components/Fan.h"
-#include "components/TemperatureSensor.h"
-#include "captive_portal.h"
 #include "FS.h"
+#include "components/Fan.h"
+#include "components/Led.h"
+#include "components/TemperatureSensor.h"
+#include "components/WifiPower.h"
+#include "config.h"
+#include "esp_log.h"
+#include "logging_macros.h"
+#include "mqtt/mqtt_manager.h"
+#include "ota/ota.h"
+#include "peripherals/peripherals.h"
+#include "pinout.h"
+#include "utils/captive_portal.h"
+#include "utils/utils.h"
+#include "wifi/wifi_manager.h"
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 
 Peripherals meuPeripherals;
 WiFiManager meuWiFi;

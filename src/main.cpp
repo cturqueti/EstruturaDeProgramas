@@ -11,7 +11,6 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 // 2️⃣ Inclusão de bibliotecas
-#include "MotorControl.h"
 #include "components/Fan.h"
 #include "components/Led.h"
 #include "components/TemperatureSensor.h"
@@ -30,6 +29,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <LittleFS.h>
+#include <LogLibrary.h>
 
 // 3️⃣ Declaração de objetos globais
 Peripherals meuPeripherals;
@@ -50,8 +50,10 @@ void initializeNormalMode();
 void setup()
 {
     LittleFS.begin();
-    Utils::enableLogColors(false);
-    Utils::setLogLevel(LogLevel::DEBUG_ALL); // DEBUG_ALL, INFO_AND_ABOVE, WARNING_AND_ABOVE, ERROR_ONLY
+    Serial.begin(9600);
+    Log::begin(&Serial, 1024);
+    Log::enableColors(false);
+    Log::setLogLevel(LogLevel::INFO); // DEBUG_ALL, INFO_AND_ABOVE, WARNING_AND_ABOVE, ERROR_ONLY
     meuPeripherals.initPeripherals();
 
     // Verifica se tem credenciais salvas

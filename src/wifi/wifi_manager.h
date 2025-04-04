@@ -12,12 +12,12 @@
 #define WIFI_MANAGER_H
 
 #include "config.h"
-#include "logging_macros.h"
 #include "pinout.h"
 #include "utils/utils.h"
 #include "wifi_config.h"
 #include <Arduino.h>
 #include <IPAddress.h>
+#include <LogLibrary.h>
 #include <WiFi.h>
 
 #ifdef ESP32

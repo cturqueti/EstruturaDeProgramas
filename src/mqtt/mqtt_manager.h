@@ -3,9 +3,9 @@
 
 #include "config.h"
 #include "config_types.h"
-#include "logging_macros.h"
 #include "utils/utils.h"
 #include <ArduinoJson.h>
+#include <LogLibrary.h>
 #include <PubSubClient.h> // Biblioteca MQTT
 #include <WiFi.h>         // Biblioteca Wi-Fi para ESP32
 #include <functional>

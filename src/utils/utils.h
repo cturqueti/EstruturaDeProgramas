@@ -37,19 +37,20 @@
 
 // 2 - Inclusão de bibliotecas necessárias
 #include "config.h"
-#include "logging_macros.h"
+// #include "logging_macros.h"
 #include <Arduino.h>
+#include <LogLibrary.h>
 #include <Preferences.h>
 
 // 3 - Declaração de enumeradores
-enum class LogLevel : uint8_t
-{
-    DEBUG_ALL = 0,
-    INFO_AND_ABOVE,
-    WARNING_AND_ABOVE,
-    ERROR_ONLY,
-    NONE
-};
+// enum class LogLevel : uint8_t
+// {
+//     DEBUG_ALL = 0,
+//     INFO_AND_ABOVE,
+//     WARNING_AND_ABOVE,
+//     ERROR_ONLY,
+//     NONE
+// };
 
 // 4 - Declaração de classes e funções
 class Utils
@@ -57,16 +58,16 @@ class Utils
 
 public:
     static void customDelay(unsigned long ms);
-    static void setLogLevel(LogLevel level);
-    static void enableLogColors(bool enable);
-    static void log(LogLevel level, const String &tag, const char *format, ...);
+    // static void setLogLevel(LogLevel level);
+    // static void enableLogColors(bool enable);
+    // static void log(LogLevel level, const String &tag, const char *format, ...);
     // void printf(const String &tag, const char *format, ...);
 
 private:
-    static LogLevel currentLogLevel;
-    static bool colorsEnabled;
+    // static LogLevel currentLogLevel;
+    // static bool colorsEnabled;
 
-    static const String getColorCode(LogLevel level);
+    // static const String getColorCode(LogLevel level);
 };
 
 class Topic

@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------------------------------------------- //
 
 // 2️⃣ Inclusão de bibliotecas
+#include "MotorControl.h"
 #include "components/Fan.h"
 #include "components/Led.h"
 #include "components/TemperatureSensor.h"

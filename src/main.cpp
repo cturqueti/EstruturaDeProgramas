@@ -50,7 +50,7 @@ void initializeNormalMode();
 void setup()
 {
     LittleFS.begin();
-    Serial.begin(9600);
+    Serial.begin(SERIAL_BAUD);
     Log::begin(&Serial, 1024);
     Log::enableColors(false);
     Log::setLogLevel(LogLevel::INFO); // DEBUG_ALL, INFO_AND_ABOVE, WARNING_AND_ABOVE, ERROR_ONLY

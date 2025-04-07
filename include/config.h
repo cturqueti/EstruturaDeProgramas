@@ -23,7 +23,7 @@
 
 #define HOSTNAME "esp32test"
 
-#define SERIAL_BAUD 115200
+#define SERIAL_BAUD 9600
 
 // #define MQTT_ENABLED true
 
